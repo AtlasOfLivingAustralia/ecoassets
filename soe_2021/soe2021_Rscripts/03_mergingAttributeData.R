@@ -72,17 +72,22 @@ epbc <- epbc %>%
 rm(threatened_ala, threatened_df, threatened_list, wons_ala, wons_list, wons_original,
    griis_list, griis_ala, griis_ala_original)
 
-# Merging by
-states <- c("cache/intersect/SA_intersect.csv", "cache/intersect/WA_intersect.csv", 
-            "cache/intersect/NT_intersect.csv", 
-            "cache/intersect/TAS_intersect.csv", "cache/intersect/ACT_intersect.csv",
-            "cache/intersect/NSW1_intersect.csv", "cache/intersect/NSW2_intersect.csv", 
-            "cache/intersect/NSW3_intersect.csv", "cache/intersect/VIC1_intersect.csv", 
-            "cache/intersect/VIC2_intersect.csv", "cache/intersect/VIC3_intersect.csv", 
-            "cache/intersect/QLD1_intersect.csv", "cache/intersect/QLD2_intersect.csv", 
-            "cache/intersect/QLD3_intersect.csv")
+##########################################################################
+# Terrestrial
+files <- c("cache/intersect/Terrestrial/df1_intersect.csv", 
+           "cache/intersect/Terrestrial/df2_intersect.csv", 
+           "cache/intersect/Terrestrial/df3_intersect.csv", 
+           "cache/intersect/Terrestrial/df4_intersect.csv", 
+           "cache/intersect/Terrestrial/df5_intersect.csv", 
+           "cache/intersect/Terrestrial/df6_intersect.csv", 
+           "cache/intersect/Terrestrial/df7_intersect.csv", 
+           "cache/intersect/Terrestrial/df8_intersect.csv", 
+           "cache/intersect/Terrestrial/df9_intersect.csv", 
+           "cache/intersect/Terrestrial/df10_intersect.csv", 
+           "cache/intersect/Terrestrial/df11_intersect.csv",
+           "cache/intersect/Terrestrial/df12_intersect.csv")
 
-n_threads <- 23
+n_threads <- 12
 cl <- makeCluster(n_threads, "PSOCK") # create workers
 clusterEvalQ(cl, { # load packages into workers
   library(data.table)
@@ -94,22 +99,18 @@ clusterEvalQ(cl, { # load packages into workers
 clusterExport(cl, c("griis", "wons", "epbc"))
 
 # Main processing
-result <- parLapply(cl, states, function(i) {
+result <- parLapply(cl, files, function(i) {
   
   ala <- fread(i, header = T)
   
-  colnames(ala)[16:21] <- paste(
-    "CAPAD2020", 
-    colnames(ala)[16:21],
-    sep = "_")
   
   # Removing blank cells
-  ala <- ala[!(is.na(ala$species) | ala$species == ""),]
-  ala <- ala[!(is.na(ala$kingdom) | ala$kingdom == ""),]
-  ala <- ala[!(is.na(ala$Australian.States.and.Territories) | ala$Australian.States.and.Territories == ""),]
-  ala <- ala[!(is.na(ala$phylum) | ala$phylum == ""),]
-  ala <- ala[!(is.na(ala$class) | ala$class == ""),]
-  ala <- ala[!(is.na(ala$basisOfRecord) | ala$basisOfRecord == ""),]
+  ala <- ala[!(is.na(ala$species_guid) | ala$species_guid == ""),]
+  
+  colnames(ala)[18:23] <- paste(
+    "CAPAD2020", 
+    colnames(ala)[18:23],
+    sep = "_")
   
   ala <- ala %>%
     dplyr::mutate(CAPAD_Status = ifelse(CAPAD2020_NAME == "Outside", "outside", "inside"))
@@ -145,10 +146,10 @@ result <- parLapply(cl, states, function(i) {
     mutate(wons_status = ifelse(is.na(WoNS), "Other", WoNS),
            WoNS = ifelse(is.na(WoNS), "Other", WoNS))
   
-  state <- gsub("cache/intersect/", "", i)
-  state <- gsub("_intersect.csv", "", state)
+  file <- gsub("cache/intersect/Terrestrial/", "", i)
+  file <- gsub("_intersect.csv", "", file)
   
-  fwrite(ala1, file = paste0("merged/", state, "_merged.csv"), row.names = FALSE, quote = TRUE)
+  fwrite(ala1, file = paste0("cache/Merged/Terrestrial/", file, "_merged.csv"), row.names = FALSE, quote = TRUE)
   
   rm(ala, ala1)
   
@@ -157,68 +158,83 @@ result <- parLapply(cl, states, function(i) {
 # Stop cluster
 cl <- stopCluster(cl)
 
-# It took about 14 minutes to finish the calculations
+##########################################################################
+# Marine
+files <- c("cache/Intersect/Marine/df1_intersect.csv", 
+           "cache/Intersect/Marine/df2_intersect.csv", 
+           "cache/Intersect/Marine/df3_intersect.csv", 
+           "cache/Intersect/Marine/df4_intersect.csv", 
+           "cache/Intersect/Marine/df5_intersect.csv", 
+           "cache/Intersect/Marine/df6_intersect.csv", 
+           "cache/Intersect/Marine/df7_intersect.csv", 
+           "cache/Intersect/Marine/df8_intersect.csv", 
+           "cache/Intersect/Marine/df9_intersect.csv", 
+           "cache/Intersect/Marine/df10_intersect.csv", 
+           "cache/Intersect/Marine/df11_intersect.csv",
+           "cache/Intersect/Marine/df12_intersect.csv")
 
-
-# When exporting intersection data by states, there was an additional column 'X' in the QLD, NSW, and VIC, but not in the other states. 
-# For this, when we renamed columns, an error occurred. We are fixing this issue here.
-
-states <- c("merged/NRM/NSW1_nrm_intersect.csv", "merged/NRM/NSW2_nrm_intersect.csv", 
-            "merged/NRM/NSW3_nrm_intersect.csv", "merged/NRM/VIC1_nrm_intersect.csv", 
-            "merged/NRM/VIC2_nrm_intersect.csv", "merged/NRM/VIC3_nrm_intersect.csv", 
-            "merged/NRM/QLD1_nrm_intersect.csv", "merged/NRM/QLD2_nrm_intersect.csv", 
-            "merged/NRM/QLD3_nrm_intersect.csv")
-
-n_threads <- 9
+n_threads <- 12
 cl <- makeCluster(n_threads, "PSOCK") # create workers
 clusterEvalQ(cl, { # load packages into workers
   library(data.table)
   library(dplyr)
+  library(parallel)
+  library(readr)
+  library(plyr)
 })
-clusterExport(cl, c("states"))
+clusterExport(cl, c("griis", "wons", "epbc"))
 
 # Main processing
-result <- try(parLapply(cl, states, function(i) {
-  df <- fread(i)
+result <- parLapply(cl, files, function(i) {
   
-  colnames(df)[16] <- c("IBRA.7.Regions")
+  ala <- fread(i, header = T)
   
-  state <- gsub("_nrm_intersect.csv", "", i)
-  state <- gsub("merged/NRM/", "", state)
   
-  fwrite(df, file = paste0("merged/NRM/", state, "_nrm_intersect.csv"), row.names = FALSE, quote = TRUE)
+  # Removing blank cells
+  ala <- ala[!(is.na(ala$species_guid) | ala$species_guid == ""),]
   
-}), silent = FALSE)
+  colnames(ala)[19:23] <- paste(
+    "CAPAD2020", 
+    colnames(ala)[19:23],
+    sep = "_")
+  
+  ala <- ala %>%
+    dplyr::mutate(CAPAD_Status = ifelse(CAPAD2020_NAME == "Outside", "outside", "inside"))
+  
+  # Merging with the GRIIS dataset
+  ala1 <- merge(ala, griis, by = "species", all = TRUE, allow.cartesian = TRUE)
+  
+  ala1 <- ala1 %>%
+    mutate(griis_status = ifelse(is.na(isInvasive), "other", isInvasive),
+           habitat = ifelse(is.na(habitat), "other", habitat),
+           occurrenceStatus = ifelse(is.na(occurrenceStatus), "other", occurrenceStatus),
+           establishmentMeans = ifelse(is.na(establishmentMeans), "other", establishmentMeans),
+           isInvasive = ifelse(is.na(isInvasive), "other", isInvasive))
+  
+  
+  # Merging with the EPBC list
+  ala1 <- merge(ala1, epbc, by = "species", all = TRUE, allow.cartesian = TRUE)
+  
+  ala1 <- ala1 %>%
+    mutate(conservation_status = ifelse(is.na(conservation_status), "Non-threatened", conservation_status),
+           date_effective = ifelse(is.na(date_effective), "Non-threatened", date_effective),
+           epbc = ifelse(is.na(epbc), "Non-threatened", epbc))
+  
+  # Merging with WoNS
+  ala1 <- merge(ala1, wons, by = "species", all = TRUE, allow.cartesian = TRUE)
+  
+  ala1 <- ala1 %>%
+    mutate(wons_status = ifelse(is.na(WoNS), "Other", WoNS),
+           WoNS = ifelse(is.na(WoNS), "Other", WoNS))
+  
+  file <- gsub("cache/Intersect/Marine/", "", i)
+  file <- gsub("_intersect.csv", "", file)
+  
+  fwrite(ala1, file = paste0("cache/Merged/Marine/", file, "_merged.csv"))
+  
+  rm(ala, ala1)
+  
+})
 
 # Stop cluster
 cl <- stopCluster(cl)
-
-
-# Merging state-wise files
-QLD1 <- fread("merged/NRM/QLD1_nrm_intersect.csv")
-QLD1 <- fread("merged/NRM/QLD1_nrm_intersect.csv")
-QLD1 <- fread("merged/NRM/QLD1_nrm_intersect.csv")
-QLD <- rbind(QLD1, QLD2, QLD3)
-fwrite(QLD, "merged/NRM/QLD_nrm_intersect.csv")
-rm(QLD1, QLD2, QLD3, QLD)
-
-QLD1 <- fread("merged/NRM/QLD1_nrm_intersect.csv")
-QLD2 <- fread("merged/NRM/QLD2_nrm_intersect.csv")
-QLD3 <- fread("merged/NRM/QLD3_nrm_intersect.csv")
-QLD <- rbind(QLD1, QLD2, QLD3)
-fwrite(QLD, "merged/NRM/QLD_nrm_intersect.csv")
-rm(QLD1, QLD2, QLD3, QLD)
-
-NSW1 <- fread("merged/NRM/NSW1_nrm_intersect.csv")
-NSW2 <- fread("merged/NRM/NSW2_nrm_intersect.csv")
-NSW3 <- fread("merged/NRM/NSW3_nrm_intersect.csv")
-NSW <- rbind(NSW1, NSW2, NSW3)
-fwrite(NSW, "merged/NRM/NSW_nrm_intersect.csv")
-rm(NSW1, NSW2, NSW3, NSW)
-
-VIC1 <- fread("merged/NRM/VIC1_nrm_intersect.csv")
-VIC2 <- fread("merged/NRM/VIC2_nrm_intersect.csv")
-VIC3 <- fread("merged/NRM/VIC3_nrm_intersect.csv")
-VIC <- rbind(VIC1, VIC2, VIC3)
-fwrite(VIC, "merged/NRM/VIC_nrm_intersect.csv")
-rm(VIC1, VIC2, VIC3, VIC)
