@@ -1,3 +1,5 @@
+# Here, we have used outputs from '02_capadIntersection.R'.
+
 # Maximising memory
 options(java.parameters = "-Xmx6g")
 

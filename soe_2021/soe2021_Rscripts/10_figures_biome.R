@@ -3,7 +3,6 @@ library(patchwork)
 library(data.table)
 
 biome <- fread("Biome_merged.csv")
-head(biome)
 
 colnames(biome)[8] <- "sppInPa"
 colnames(biome)[13] <- "sppOutPa"
