@@ -3,7 +3,7 @@ options(java.parameters = "-Xmx6g")
 
 # Loading required libraries
 library(data.table)
-library(dplyr)
+library(tidyverse)
 library(galah)
 
 # Downloading records from the ALA
@@ -51,21 +51,23 @@ lapply(
       )
     )
     saveRDS(result,
-            paste0("./cache/", a$acronym, ".rds"))
+            paste0("cache/", a$acronym, ".rds"))
   }
 )
 
-
+# The downloaded files contained two types of file: i) a zip file containing all the spatial records, citation details, a heading and a 'read me' file, and 
+# ii) a rds file. For the analysis purposes, we created three sub-folders (csv (csv files containing the original data from the zip file), otherFiles 
+# (citaion, heading, read me file), and rds (rds files)) inside the 'RawData' folder.
 
 # Merging data
-input_folder <- "cache/RawData/" # folder that contains all the csvs
+input_folder <- "cache/rawData/csv" # folder that contains all the CSV files
 data <- dir(input_folder, "^.*\\.csv$", full.names = TRUE) # create file names of all the csvs
 ala_data <- plyr::ldply(data, data.table::fread)
 
 # Renaming columns
 colnames(ala_data)[14] <- c("States&Territories")
 colnames(ala_data)[15] <- c("IBRA")
-colnames(ala_data)[20] <- c("IMCRA")
+colnames(ala_data)[16] <- c("IMCRA")
 colnames(ala_data)[17] <- c("NRM")
 
 # Removing records outside 1901-2020 range
@@ -75,49 +77,57 @@ ala_data <- ala_data %>%
 
 # Grouping into smaller dataframes
 ala1 <- ala_data[1:5000000,]
-fwrite(ala1, "cache/SmallerChunks/df1.csv")
+fwrite(ala1, "cache/smallerChunks/df1.csv")
 rm(ala1)
 
 ala2 <- ala_data[5000001:10000000,]
-fwrite(ala2, "cache/SmallerChunks/df2.csv")
+fwrite(ala2, "cache/smallerChunks/df2.csv")
 rm(ala2)
 
 ala3 <- ala_data[10000001:15000000,]
-fwrite(ala3, "cache/SmallerChunks/df3.csv")
+fwrite(ala3, "cache/smallerChunks/df3.csv")
 rm(ala3)
 
 ala4 <- ala_data[15000001:20000000,]
-fwrite(ala4, "cache/SmallerChunks/df4.csv")
+fwrite(ala4, "cache/smallerChunks/df4.csv")
 rm(ala4)
 
 ala5 <- ala_data[20000001:25000000,]
-fwrite(ala5, "cache/SmallerChunks/df5.csv")
+fwrite(ala5, "cache/smallerChunks/df5.csv")
 rm(ala5)
 
 ala6 <- ala_data[25000001:30000000,]
-fwrite(ala6, "cache/SmallerChunks/df6.csv")
+fwrite(ala6, "cache/smallerChunks/df6.csv")
 rm(ala6)
 
 ala7 <- ala_data[30000001:35000000,]
-fwrite(ala7, "cache/SmallerChunks/df7.csv")
+fwrite(ala7, "cache/smallerChunks/df7.csv")
 rm(ala7)
 
 ala8 <- ala_data[35000001:40000000,]
-fwrite(ala8, "cache/SmallerChunks/df8.csv")
+fwrite(ala8, "cache/smallerChunks/df8.csv")
 rm(ala8)
 
 ala9 <- ala_data[40000001:45000000,]
-fwrite(ala9, "cache/SmallerChunks/df9.csv")
+fwrite(ala9, "cache/smallerChunks/df9.csv")
 rm(ala9)
 
 ala10 <- ala_data[45000001:50000000,]
-fwrite(ala10, "cache/SmallerChunks/df10.csv")
+fwrite(ala10, "cache/smallerChunks/df10.csv")
 rm(ala10)
 
 ala11 <- ala_data[50000001:55000000,]
-fwrite(ala11, "cache/SmallerChunks/df11.csv")
+fwrite(ala11, "cache/smallerChunks/df11.csv")
 rm(ala11)
 
-ala12 <- ala_data[55000001:60033028,]
-fwrite(ala12, "cache/SmallerChunks/df12.csv")
+ala12 <- ala_data[55000001:60000000,]
+fwrite(ala12, "cache/smallerChunks/df12.csv")
 rm(ala12)
+
+ala13 <- ala_data[60000001:65000000,]
+fwrite(ala13, "cache/smallerChunks/df13.csv")
+rm(ala13)
+
+ala14 <- ala_data[65000000:71026742,]
+fwrite(ala14, "cache/smallerChunks/df14.csv")
+rm(ala14)

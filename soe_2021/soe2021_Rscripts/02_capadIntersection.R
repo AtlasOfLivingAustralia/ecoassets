@@ -6,12 +6,10 @@ library(data.table)
 library(dplyr)
 library(sf)
 library(sp)
-library(parallel)
-library(readr)
 
 # Intersecting with the CAPAD 2020 layer (terrestrial)
 # Reading and validating shapefile
-capad <- st_read("CAPAD/CAPAD2020_terrestrial.shp")
+capad <- st_read("cache/shapeFiles/capad/capadTerrestrial.shp")
 capad <- st_transform(capad, 4326)
 capad <- st_make_valid(capad)
 capad <- st_collection_extract(capad, "POLYGON")
@@ -23,26 +21,17 @@ capad1 <- capad %>%
 capad1$col.id <- as.integer(capad1$col.id)
 
 # Intersection by smaller data files to accelerate the process
-files <- c("cache/SmallerChunks/df1.csv", "cache/SmallerChunks/df2.csv", 
-           "cache/SmallerChunks/df3.csv", "cache/SmallerChunks/df4.csv", 
-           "cache/SmallerChunks/df5.csv", "cache/SmallerChunks/df6.csv",
-           "cache/SmallerChunks/df7.csv", "cache/SmallerChunks/df8.csv", 
-           "cache/SmallerChunks/df9.csv", "cache/SmallerChunks/df10.csv", 
-           "cache/SmallerChunks/df11.csv", "cache/SmallerChunks/df12.csv")
+files <- c("cache/smallerChunks/df1.csv", "cache/smallerChunks/df2.csv", 
+           "cache/smallerChunks/df3.csv", "cache/smallerChunks/df4.csv", 
+           "cache/smallerChunks/df5.csv", "cache/smallerChunks/df6.csv",
+           "cache/smallerChunks/df7.csv", "cache/smallerChunks/df8.csv", 
+           "cache/smallerChunks/df9.csv", "cache/smallerChunks/df10.csv", 
+           "cache/smallerChunks/df11.csv", "cache/smallerChunks/df12.csv", 
+           "cache/smallerChunks/df13.csv", "cache/smallerChunks/df14.csv")
 
-n_threads <- 14 # number of threads depend on the computer configuration
-cl <- makeCluster(n_threads, "PSOCK") # create workers
-clusterEvalQ(cl, { # load packages into workers
-  library(data.table)
-  library(dplyr)
-  library(sf)
-  library(sp)
-  library(readr)
-})
-clusterExport(cl, c("capad1"))
 
 # Main processing
-result <- parLapply(cl, files, function(i) {
+for (i in files){
   
   occ <- fread(i, header = T)
   occ <- occ %>%
@@ -91,11 +80,11 @@ result <- parLapply(cl, files, function(i) {
     dplyr::mutate(NAME = ifelse(is.na(NAME), "Outside", NAME))
   
   file <- gsub(".csv", "", i)
-  file <- gsub("cache/SmallerChunks/", "", file)
+  file <- gsub("cache/smallerChunks/", "", file)
   
-  fwrite(merged1, file = paste0("cache/Intersect/Terrestrial/", file, "_intersect.csv"))
+  fwrite(merged1, file = paste0("cache/cntersect/Terrestrial/", file, "_intersect.csv"))
   
-})
+}
 
 # Stop cluster
 cl <- stopCluster(cl)
