@@ -38,13 +38,14 @@ wons <- wons[wons$species != "", ]
 
 # Cross-checking EPBC list
 threatened_list <- fread("cache/otherAttributes/epbc.csv")
-threatened_ala <- select_taxa(threatened_list$scientific_name)
-threatened_ala <- threatened_ala[!is.na(threatened_ala$species), ]
-epbc <- merge(threatened_list,
-                       threatened_ala[, c("search_term", "taxon_concept_id")],
-                       by.x = "scientific_name", by.y = "search_term",
-                       all = FALSE)
-epbc <- epbc %>%
+# threatened_ala <- select_taxa(threatened_list$scientific_name)
+# threatened_ala <- threatened_ala[!is.na(threatened_ala$species), ]
+# epbc <- merge(threatened_list,
+#                        threatened_ala[, c("search_term", "taxon_concept_id")],
+#                        by.x = "scientific_name", by.y = "search_term",
+#                        all = FALSE)
+
+epbc <- threatened_list %>%
   dplyr::select(scientific_name, conservation_status, date_effective)
 colnames(epbc) <- c("species", "conservation_status", "date_effective")
 epbc <- epbc %>%
@@ -71,16 +72,12 @@ files <- c("cache/intersect/terrestrial/df1_intersect.csv",
            "cache/intersect/terrestrial/df14_intersect.csv")
 
 for(i in files) {
-  
+  print(i)
   ala <- fread(i, header = T)
   
-  
-  # Removing blank cells
-  ala <- ala[!(is.na(ala$species_guid) | ala$species_guid == ""),]
-  
-  colnames(ala)[18:23] <- paste(
+  colnames(ala)[19:23] <- paste(
     "CAPAD2020", 
-    colnames(ala)[18:23],
+    colnames(ala)[19:23],
     sep = "_")
   
   ala <- ala %>%
@@ -116,7 +113,10 @@ for(i in files) {
   ala1 <- ala1 %>%
     mutate(wons_status = ifelse(is.na(WoNS), "Other", WoNS),
            WoNS = ifelse(is.na(WoNS), "Other", WoNS))
-  
+  ala1 <- ala1 %>% 
+    dplyr::select(speciesID, year, class, decimalLatitude, decimalLongitude, basisOfRecord, IBRA, IMCRA, NRM,
+                  CAPAD2020_NAME, CAPAD2020_TYPE, CAPAD_Status, indigenous_Status, isInvasive, griis_status,
+                  conservation_status, date_effective, epbc, WoNS, wons_status)
   file <- gsub("cache/intersect/terrestrial/", "", i)
   file <- gsub("_intersect.csv", "", file)
   
@@ -147,10 +147,6 @@ files <- c("cache/intersect/marine/df1_intersect.csv",
 for(i in files) {
   
   ala <- fread(i, header = T)
-  
-  
-  # Removing blank cells
-  ala <- ala[!(is.na(ala$species_guid) | ala$species_guid == ""),]
   
   colnames(ala)[19:23] <- paste(
     "CAPAD2020", 

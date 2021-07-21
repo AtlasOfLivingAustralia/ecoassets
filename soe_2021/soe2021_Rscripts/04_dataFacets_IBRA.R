@@ -4,15 +4,15 @@ library(data.table)
 library(dplyr)
 
 # Merging data
-input_folder <- "cache/Merged/Terrestrial/" # folder that contains all the csvs
+input_folder <- "cache/merged/terrestrial/" # folder that contains all the csvs
 data <- dir(input_folder, "^.*\\.csv$", full.names = TRUE) # create file names of all the csvs
 ala <- plyr::ldply(data, data.table::fread)
 
-colnames(ala)[18] <- c("CM_Zone")
+colnames(ala)[9] <- c("CM_Zone")
 
 # Subsetting data
 ala <- ala %>%
-  dplyr::select(species_guid, year, basisOfRecord,
+  dplyr::select(speciesID, year, basisOfRecord,
                 IBRA, CAPAD_Status, wons_status, griis_status,
                 conservation_status, CM_Zone, indigenous_Status)
 
@@ -45,7 +45,7 @@ occByIbra <- ala %>%
   dplyr::select("IBRA", "YearRange")
 occByIbra <- setDT(occByIbra)[, .(occByIbra = .N), keyby = c("IBRA", "YearRange")]
 
-fwrite(occByIbra, "SumTable/occByIbra.csv")
+fwrite(occByIbra, "cache/sumTable/occByIbra.csv")
 
 rm(occByIbra)
 
@@ -58,7 +58,7 @@ setkey(sppByIbra,NULL)
 sppByIbra <- unique(sppByIbra)
 
 sppByIbra <- setDT(sppByIbra)[, .(sppByIbra = .N), keyby = c("IBRA", "YearRange")]
-fwrite(sppByIbra, "SumTable/sppByIbra.csv")
+fwrite(sppByIbra, "cache/sumTable/sppByIbra.csv")
 rm(sppByIbra)
 
 # Number of citizen science records
@@ -66,8 +66,8 @@ cs <- ala %>%
   dplyr::select(IBRA, YearRange, basisOfRecord)
 
 cs <- cs %>%
-  dplyr::mutate(basisOfRecord = ifelse(basisOfRecord == "HumanObservation", "CitizenScience", "OtherSource"))
-cs <- cs %>%
+  dplyr::mutate(basisOfRecord = ifelse(basisOfRecord == "HUMAN_OBSERVATION", "CitizenScience", "OtherSource"))
+cs1 <- cs %>%
   dplyr::filter(basisOfRecord == "CitizenScience")
 
 
@@ -75,7 +75,7 @@ cs <- setDT(cs)[, .(CS_records = .N), keyby = c("IBRA", "YearRange", "basisOfRec
 cs <- cs %>%
   dplyr::select(IBRA, YearRange, CS_records)
 
-fwrite(cs, "SumTable/NumberOfCitizenScienceRecords.csv")
+fwrite(cs, "cache/sumTable/NumberOfCitizenScienceRecords.csv")
 rm(cs)
 
 # Species first/last seen count
