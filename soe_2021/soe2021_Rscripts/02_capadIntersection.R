@@ -108,7 +108,8 @@ files <- c("cache/smallerChunks/df1.csv", "cache/smallerChunks/df2.csv",
            "cache/smallerChunks/df5.csv", "cache/smallerChunks/df6.csv",
            "cache/smallerChunks/df7.csv", "cache/smallerChunks/df8.csv", 
            "cache/smallerChunks/df9.csv", "cache/smallerChunks/df10.csv", 
-           "cache/smallerChunks/df11.csv", "cache/smallerChunks/df12.csv")
+           "cache/smallerChunks/df11.csv", "cache/smallerChunks/df12.csv", 
+           "cache/smallerChunks/df13.csv", "cache/smallerChunks/df14.csv")
 
 
 for(i in files) {
