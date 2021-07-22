@@ -72,16 +72,16 @@ rm(threatened_ala, threatened_df, threatened_list, wons_ala, wons_list, wons_ori
 
 ##########################################################################
 # Terrestrial
-files <- c("cache/Intersect/Biome/df1_intersect_biome.csv", 
-           "cache/Intersect/Biome/df2_intersect_biome.csv", 
-           "cache/Intersect/Biome/df3_intersect_biome.csv", 
-           "cache/Intersect/Biome/df4_intersect_biome.csv", 
-           "cache/Intersect/Biome/df5_intersect_biome.csv", 
-           "cache/Intersect/Biome/df6_intersect_biome.csv", 
-           "cache/Intersect/Biome/df7_intersect_biome.csv", 
-           "cache/Intersect/Biome/df8_intersect_biome.csv", 
-           "cache/Intersect/Biome/df9_intersect_biome.csv", 
-           "cache/Intersect/Biome/df10_intersect_biome.csv", 
+files <- c("cache/Intersect/Biome/df1_intersect_biome.csv",
+           "cache/Intersect/Biome/df2_intersect_biome.csv",
+           "cache/Intersect/Biome/df3_intersect_biome.csv",
+           "cache/Intersect/Biome/df4_intersect_biome.csv",
+           "cache/Intersect/Biome/df5_intersect_biome.csv",
+           "cache/Intersect/Biome/df6_intersect_biome.csv",
+           "cache/Intersect/Biome/df7_intersect_biome.csv",
+           "cache/Intersect/Biome/df8_intersect_biome.csv",
+           "cache/Intersect/Biome/df9_intersect_biome.csv",
+           "cache/Intersect/Biome/df10_intersect_biome.csv",
            "cache/Intersect/Biome/df11_intersect_biome.csv",
            "cache/Intersect/Biome/df12_intersect_biome.csv")
 
@@ -98,59 +98,59 @@ clusterExport(cl, c("griis", "wons", "epbc"))
 
 # Main processing
 result <- parLapply(cl, files, function(i) {
-  
+
   ala <- fread(i, header = T)
-  
-  
+
+
   # Removing blank cells
   ala <- ala[!(is.na(ala$species_guid) | ala$species_guid == ""),]
-  
+
   colnames(ala)[19:23] <- paste(
-    "CAPAD2020", 
+    "CAPAD2020",
     colnames(ala)[19:23],
     sep = "_")
-  
+
   ala <- ala %>%
     dplyr::mutate(CAPAD_Status = ifelse(CAPAD2020_NAME == "Outside", "outside", "inside"))
-  
+
   ala <- ala %>%
-    dplyr::mutate(indigenous_Status = ifelse(CAPAD2020_TYPE %in% 
-                                               c("Indigenous Protected Area", "National Park Aboriginal", "Aboriginal Area"), 
+    dplyr::mutate(indigenous_Status = ifelse(CAPAD2020_TYPE %in%
+                                               c("Indigenous Protected Area", "National Park Aboriginal", "Aboriginal Area"),
                                              "inside", "outside"))
-  
+
   # Merging with the GRIIS dataset
   ala1 <- merge(ala, griis, by = "species", all = TRUE, allow.cartesian = TRUE)
-  
+
   ala1 <- ala1 %>%
     mutate(griis_status = ifelse(is.na(isInvasive), "other", isInvasive),
            habitat = ifelse(is.na(habitat), "other", habitat),
            occurrenceStatus = ifelse(is.na(occurrenceStatus), "other", occurrenceStatus),
            establishmentMeans = ifelse(is.na(establishmentMeans), "other", establishmentMeans),
            isInvasive = ifelse(is.na(isInvasive), "other", isInvasive))
-  
-  
+
+
   # Merging with the EPBC list
   ala1 <- merge(ala1, epbc, by = "species", all = TRUE, allow.cartesian = TRUE)
-  
+
   ala1 <- ala1 %>%
     mutate(conservation_status = ifelse(is.na(conservation_status), "Non-threatened", conservation_status),
            date_effective = ifelse(is.na(date_effective), "Non-threatened", date_effective),
            epbc = ifelse(is.na(epbc), "Non-threatened", epbc))
-  
+
   # Merging with WoNS
   ala1 <- merge(ala1, wons, by = "species", all = TRUE, allow.cartesian = TRUE)
-  
+
   ala1 <- ala1 %>%
     mutate(wons_status = ifelse(is.na(WoNS), "Other", WoNS),
            WoNS = ifelse(is.na(WoNS), "Other", WoNS))
-  
+
   file <- gsub("cache/Intersect/Biome/", "", i)
   file <- gsub("_intersect_biome.csv", "", file)
-  
+
   fwrite(ala1, file = paste0("cache/Merged/Biome/", file, "_merged.csv"), row.names = FALSE, quote = TRUE)
-  
+
   rm(ala, ala1)
-  
+
 })
 
 # Stop cluster

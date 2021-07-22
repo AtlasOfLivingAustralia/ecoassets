@@ -160,8 +160,6 @@ for(i in files) {
   merged1 <- merged %>% 
     dplyr::mutate(NAME = ifelse(is.na(NAME), "Outside", NAME))
   
-  merged1 <- merged1[!(is.na(merged1$IMCRA) | merged1$IMCRA == ""),]
-  
   file <- gsub(".csv", "", i)
   file <- gsub("cache/smallerChunks/", "", file)
   
