@@ -45,7 +45,7 @@ occByIbra <- ala %>%
   dplyr::select("IBRA", "YearRange")
 occByIbra <- setDT(occByIbra)[, .(occByIbra = .N), keyby = c("IBRA", "YearRange")]
 
-fwrite(occByIbra, "cache/sumTable/occByIbra.csv")
+fwrite(occByIbra, "cache/sumTable/ibra/occByIbra.csv")
 
 rm(occByIbra)
 
@@ -58,7 +58,7 @@ setkey(sppByIbra,NULL)
 sppByIbra <- unique(sppByIbra)
 
 sppByIbra <- setDT(sppByIbra)[, .(sppByIbra = .N), keyby = c("IBRA", "YearRange")]
-fwrite(sppByIbra, "cache/sumTable/sppByIbra.csv")
+fwrite(sppByIbra, "cache/sumTable/ibra/sppByIbra.csv")
 rm(sppByIbra)
 
 # Number of citizen science records
@@ -67,7 +67,7 @@ cs <- ala %>%
 
 cs <- cs %>%
   dplyr::mutate(basisOfRecord = ifelse(basisOfRecord == "HUMAN_OBSERVATION", "CitizenScience", "OtherSource"))
-cs1 <- cs %>%
+cs <- cs %>%
   dplyr::filter(basisOfRecord == "CitizenScience")
 
 
@@ -75,7 +75,7 @@ cs <- setDT(cs)[, .(CS_records = .N), keyby = c("IBRA", "YearRange", "basisOfRec
 cs <- cs %>%
   dplyr::select(IBRA, YearRange, CS_records)
 
-fwrite(cs, "cache/sumTable/NumberOfCitizenScienceRecords.csv")
+fwrite(cs, "cache/sumTable/ibra/NumberOfCitizenScienceRecords.csv")
 rm(cs)
 
 # Species first/last seen count
@@ -115,11 +115,11 @@ df_final$YearRange <- factor(
 df_final <- df_final %>%
   dplyr::select(IBRA, YearRange, new_species, last_seen_species)
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved.csv")
 
 rm(ala_simple, df_final, df_list, result_df, result_list, data, input_folder)
 
-# Number of species inside indigeneous PA
+# Number of species inside indigenous PA
 pa <- ala %>%
   dplyr::select(IBRA, species_guid, YearRange, indigenous_Status)
 
@@ -141,8 +141,8 @@ sppOutPa <- sppOutPa %>%
   dplyr::select(IBRA, YearRange, count)
 colnames(sppOutPa)[3] <- "sppOutIndPa"
 
-fwrite(sppInPa, "SumTable/sppInIndPa.csv")
-fwrite(sppOutPa, "SumTable/sppOutIndPa.csv")
+fwrite(sppInPa, "cache/sumTable/ibra/sppInIndPa.csv")
+fwrite(sppOutPa, "cache/sumTable/ibra/sppOutIndPa.csv")
 
 rm(pa, sppInPa, sppOutPa)
 
@@ -187,7 +187,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "sppInIndPa_new_species",
                        "sppInIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_sppInIndPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_sppInIndPa.csv")
 
 rm(df_final, df_list, result_df, result_list, pa)
 
@@ -207,9 +207,9 @@ sppInPa <- pa %>%
 sppInPa <- sppInPa %>%
   dplyr::select(IBRA, YearRange, sppInPa)
 
-fwrite(sppInPa, "SumTable/sppInPa.csv")
+fwrite(sppInPa, "cache/sumTable/ibra/sppInPa.csv")
 
-rm(pa, sppInPa, sppOutPa)
+rm(pa, sppInPa)
 
 # Species inside PA first/last seen count
 pa <- ala %>%
@@ -252,7 +252,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "sppInPa_new_species",
                        "sppInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_sppInPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_sppInPa.csv")
 
 rm(df_final, df_list, result_df, result_list, pa)
 
@@ -279,8 +279,8 @@ sppOnlyOutPa <- sppOnlyOutPa %>%
 colnames(sppOnlyOutPa)[3] <- "sppOnlyOutPa"
 
 
-fwrite(sppOnlyInPa, "SumTable/sppOnlyInPa.csv")
-fwrite(sppOnlyOutPa, "SumTable/sppOnlyOutPa.csv")
+fwrite(sppOnlyInPa, "cache/sumTable/ibra/sppOnlyInPa.csv")
+fwrite(sppOnlyOutPa, "cache/sumTable/ibra/sppOnlyOutPa.csv")
 
 rm(pa, sppOnlyInPa, sppOnlyOutPa)
 
@@ -325,11 +325,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "sppOnlyInPa_new_species",
                        "sppOnlyInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_sppOnlyInPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_sppOnlyInPa.csv")
 
 rm(df_final, df_list, result_df, result_list, pa)
 
-# Species distributed only inside (not outside) PA first/last seen count
+# Species distributed only outside (not inside) PA first/last seen count
 pa <- ala %>%
   dplyr::select(IBRA, species_guid, YearRange, capad_status)
 
@@ -370,7 +370,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "sppOnlyOutPa_new_species",
                        "sppOnlyOutPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_sppOnlyOutPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_sppOnlyOutPa.csv")
 
 rm(df_final, df_list, result_df, result_list, pa)
 
@@ -384,16 +384,20 @@ Ind_pa <- unique(Ind_pa)
 
 Ind_pa <- setDT(Ind_pa)[, .(count = .N), keyby = c("IBRA", "YearRange", "indigenous_Status")]
 
-head(Ind_pa)
-
 sppOnlyInIndPa <- Ind_pa %>%
   dplyr::filter(indigenous_Status == "inside")
+sppOnlyInIndPa <- sppOnlyInIndPa %>% 
+  dplyr::select(IBRA, YearRange, count)
+colnames(sppOnlyInIndPa)[3] <- "sppOnlyInIndPa"
 
 sppOnlyOutIndPa <- Ind_pa %>%
   dplyr::filter(indigenous_Status == "outside")
+sppOnlyOutIndPa <- sppOnlyOutIndPa %>% 
+  dplyr::select(IBRA, YearRange, count)
+colnames(sppOnlyOutIndPa)[3] <- "sppOnlyOutIndPa"
 
-fwrite(sppOnlyInIndPa, "SumTable/sppOnlyInIndPa.csv")
-fwrite(sppOnlyOutIndPa, "SumTable/sppOnlyOutIndPa.csv")
+fwrite(sppOnlyInIndPa, "cache/sumTable/ibra/sppOnlyInIndPa.csv")
+fwrite(sppOnlyOutIndPa, "cache/sumTable/ibra/sppOnlyOutIndPa.csv")
 
 rm(Ind_pa, sppOnlyInIndPa, sppOnlyOutIndPa)
 
@@ -404,6 +408,7 @@ pa <- ala %>%
 # Removing duplicates
 setkey(pa,NULL)
 pa <- unique(pa)
+
 pa <- pa %>%
   dplyr::filter(indigenous_Status == "inside")
 
@@ -438,11 +443,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "sppOnlyInIndPa_new_species",
                        "sppOnlyInIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_sppOnlyInIndPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_sppOnlyInIndPa.csv")
 
 rm(df_final, df_list, result_df, result_list, pa)
 
-# Species distributed only inside (not outside) PA first/last seen count
+# Species distributed only outside (not inside) PA first/last seen count
 pa <- ala %>%
   dplyr::select(IBRA, species_guid, YearRange, indigenous_Status)
 
@@ -483,7 +488,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "sppOnlyOutIndPa_new_species",
                        "sppOnlyOutIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_sppOnlyOutIndPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_sppOnlyOutIndPa.csv")
 
 rm(df_final, df_list, result_df, result_list, pa)
 
@@ -498,7 +503,6 @@ sppByIbra <- sppByIbra %>%
 sppByIbra <- sppByIbra %>%
   dplyr::filter(griis_status == "introduced")
 
-
 # Removing duplicates
 setkey(sppByIbra,NULL)
 sppByIbra <- unique(sppByIbra)
@@ -506,8 +510,10 @@ sppByIbra <- unique(sppByIbra)
 
 sppByIbra1 <- setDT(sppByIbra)[, .(sppByIbra_introduced = .N),
                                keyby = c("IBRA", "YearRange", "griis_status")]
+sppByIbra1 <- sppByIbra1 %>% 
+  dplyr::select(IBRA, YearRange, sppByIbra_introduced)
 
-fwrite(sppByIbra1, "SumTable/sppByIbra_introduced.csv")
+fwrite(sppByIbra1, "cache/sumTable/ibra/sppByIbra_introduced.csv")
 
 rm(sppByIbra, sppByIbra1)
 
@@ -529,7 +535,6 @@ griis <- griis %>%
 
 griis$YearRange <- as.numeric(griis$YearRange)
 df_final <- griis[, .(.N), keyby = c("IBRA", "YearRange")]
-
 
 df_list <- split(df_final, seq_len(nrow(df_final)))
 result_list <- lapply(df_list, function(a, x){
@@ -558,11 +563,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "introduced_new_species",
                        "introduced_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_introduced.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_introduced.csv")
 
 rm(df_final, df_list, result_df, result_list, griis)
 
-# Number of introduced species inside indigeneous PA
+# Number of introduced species inside indigenous PA
 griis <- ala %>%
   dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "indigenous_Status")
 
@@ -578,19 +583,19 @@ griis <- unique(griis)
 
 pa <- setDT(griis)[, .(count = .N), keyby = c("IBRA", "YearRange", "indigenous_Status", "griis_status")]
 
-sppInPa <- pa %>%
+sppInIndPa <- pa %>%
   dplyr::filter(indigenous_Status == "inside")
 
-sppInPa <- sppInPa %>%
+sppInIndPa <- sppInIndPa %>%
   dplyr::select(IBRA, YearRange, count)
 
-colnames(sppInPa)[3] <- c("sppInIndPa_introduced")
+colnames(sppInIndPa)[3] <- c("sppInIndPa_introduced")
 
-fwrite(sppInPa, "SumTable/sppInIndPa_introduced.csv")
+fwrite(sppInIndPa, "cache/sumTable/ibra/sppInIndPa_introduced.csv")
 
-rm(griis, pa, sppInPa)
+rm(griis, pa, sppInIndPa)
 
-# Introduced species inside PA first/last seen count
+# Number of introduced species inside PA first/last seen count
 griis <- ala %>%
   dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "indigenous_Status")
 
@@ -637,11 +642,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppInIndPa_new_species",
                        "introduced_sppInIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_introduced_sppInInd.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_introduced_sppInInd.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
-# Introduced species which are either inside (not outside) or outside (not inside) indigeneous PAs
+# Introduced species which are either inside (not outside) or outside (not inside) indigenous PAs
 griis <- ala %>%
   dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "indigenous_Status")
 
@@ -669,8 +674,8 @@ sppOnlyOutIndPa <- sppOnlyOutIndPa %>%
   dplyr::select(IBRA, YearRange, count)
 colnames(sppOnlyOutIndPa)[3] <- "introduced_sppOnlyOutIndPa"
 
-fwrite(sppOnlyInIndPa, "SumTable/introduced_sppOnlyInIndPa.csv")
-fwrite(sppOnlyOutIndPa, "SumTable/introduced_sppOnlyOutIndPa.csv")
+fwrite(sppOnlyInIndPa, "cache/sumTable/ibra/introduced_sppOnlyInIndPa.csv")
+fwrite(sppOnlyOutIndPa, "cache/sumTable/ibra/introduced_sppOnlyOutIndPa.csv")
 
 rm(griis, Ind_pa, sppOnlyInIndPa, sppOnlyOutIndPa)
 
@@ -721,10 +726,9 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppOnlyInIndPa_new_species",
                        "introduced_sppOnlyInIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_introduced_sppOnlyInIndPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_introduced_sppOnlyInIndPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
-
 
 # Introduced species distributed only outside (not inside) indigenous PA first/last seen count
 griis <- ala %>%
@@ -773,7 +777,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppOnlyOutIndPa_new_species",
                        "introduced_sppOnlyOutIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_introduced_sppOnlyOutIndPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_introduced_sppOnlyOutIndPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
@@ -802,7 +806,7 @@ sppInPa <- sppInPa %>%
 
 colnames(sppInPa)[3] <- c("sppInPa_introduced")
 
-fwrite(sppInPa, "SumTable/sppInPa_introduced.csv")
+fwrite(sppInPa, "cache/sumTable/ibra/sppInPa_introduced.csv")
 
 rm(griis, pa, sppInPa)
 
@@ -854,12 +858,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppInPa_new_species",
                        "introduced_sppInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_introduced_sppInPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_introduced_sppInPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
-# Introduced species which are either inside (not outside) or outside 
-# (not inside) PAs
+# Introduced species which are either inside (not outside) or outside (not inside) PAs
 griis <- ala %>%
   dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", 
                 "capad_status")
@@ -888,8 +891,8 @@ sppOnlyOutPa <- sppOnlyOutPa %>%
   dplyr::select(IBRA, YearRange, count)
 colnames(sppOnlyOutPa)[3] <- "introduced_sppOnlyOutPa"
 
-fwrite(sppOnlyInPa, "SumTable/introduced_sppOnlyInPa.csv")
-fwrite(sppOnlyOutPa, "SumTable/introduced_sppOnlyOutPa.csv")
+fwrite(sppOnlyInPa, "cache/sumTable/ibra/introduced_sppOnlyInPa.csv")
+fwrite(sppOnlyOutPa, "cache/sumTable/ibra/introduced_sppOnlyOutPa.csv")
 
 rm(griis, Ind_pa, sppOnlyInPa, sppOnlyOutPa)
 
@@ -940,10 +943,9 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppOnlyInPa_new_species",
                        "introduced_sppOnlyInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_introduced_sppOnlyInPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_introduced_sppOnlyInPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
-
 
 # Introduced species distributed only outside (not inside) indigenous PA first/last seen count
 griis <- ala %>%
@@ -992,7 +994,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppOnlyOutPa_new_species",
                        "introduced_sppOnlyOutPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_introduced_sppOnlyOutPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_introduced_sppOnlyOutPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
@@ -1015,8 +1017,10 @@ sppByIbra <- unique(sppByIbra)
 
 sppByIbra1 <- setDT(sppByIbra)[, .(sppByIbra_invasive = .N),
                                keyby = c("IBRA", "YearRange", "griis_status")]
+sppByIbra1 <- sppByIbra1 %>% 
+  dplyr::select(IBRA, YearRange, sppByIbra_invasive)
 
-fwrite(sppByIbra1, "SumTable/sppByIbra_invasive.csv")
+fwrite(sppByIbra1, "cache/sumTable/ibra/sppByIbra_invasive.csv")
 
 rm(sppByIbra, sppByIbra1)
 
@@ -1066,11 +1070,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "invasive_new_species",
                        "invasive_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_invasive.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_invasive.csv")
 
 rm(df_final, df_list, result_df, result_list, griis)
 
-# Number of introduced species inside indigeneous PA
+# Number of introduced species inside indigenous PA
 griis <- ala %>%
   dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "indigenous_Status")
 
@@ -1094,11 +1098,11 @@ sppInPa <- sppInPa %>%
 
 colnames(sppInPa)[3] <- c("sppInIndPa_invasive")
 
-fwrite(sppInPa, "SumTable/sppInIndPa_invasive.csv")
+fwrite(sppInPa, "cache/sumTable/ibra/sppInIndPa_invasive.csv")
 
 rm(griis, pa, sppInPa)
 
-# Invasive species inside PA first/last seen count
+# Invasive species inside indigenous PA first/last seen count
 griis <- ala %>%
   dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "indigenous_Status")
 
@@ -1145,11 +1149,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "invasive_sppInIndPa_new_species",
                        "invasive_sppInIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_invasive_sppInInd.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_invasive_sppInInd.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
-# Invasive species which are either inside (not outside) or outside (not inside) indigeneous PAs
+# Invasive species which are either inside (not outside) or outside (not inside) indigenous PAs
 griis <- ala %>%
   dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "indigenous_Status")
 
@@ -1177,8 +1181,8 @@ sppOnlyOutIndPa <- sppOnlyOutIndPa %>%
   dplyr::select(IBRA, YearRange, count)
 colnames(sppOnlyOutIndPa)[3] <- "invasive_sppOnlyOutIndPa"
 
-fwrite(sppOnlyInIndPa, "SumTable/invasive_sppOnlyInIndPa.csv")
-fwrite(sppOnlyOutIndPa, "SumTable/invasive_sppOnlyOutIndPa.csv")
+fwrite(sppOnlyInIndPa, "cache/sumTable/ibra/invasive_sppOnlyInIndPa.csv")
+fwrite(sppOnlyOutIndPa, "cache/sumTable/ibra/invasive_sppOnlyOutIndPa.csv")
 
 rm(griis, Ind_pa, sppOnlyInIndPa, sppOnlyOutIndPa)
 
@@ -1229,7 +1233,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "invasive_sppOnlyInIndPa_new_species",
                        "invasive_sppOnlyInIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_invasive_sppOnlyInIndPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_invasive_sppOnlyInIndPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
@@ -1281,7 +1285,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "invasive_sppOnlyOutIndPa_new_species",
                        "invasive_sppOnlyOutIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_invasive_sppOnlyOutIndPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_invasive_sppOnlyOutIndPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
@@ -1310,7 +1314,7 @@ sppInPa <- sppInPa %>%
 
 colnames(sppInPa)[3] <- c("sppInPa_invasive")
 
-fwrite(sppInPa, "SumTable/sppInPa_invasive.csv")
+fwrite(sppInPa, "cache/sumTable/ibra/sppInPa_invasive.csv")
 
 rm(griis, pa, sppInPa)
 
@@ -1362,7 +1366,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "invasive_sppInPa_new_species",
                        "invasive_sppInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_invasive_sppInPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_invasive_sppInPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
@@ -1396,8 +1400,8 @@ sppOnlyOutPa <- sppOnlyOutPa %>%
   dplyr::select(IBRA, YearRange, count)
 colnames(sppOnlyOutPa)[3] <- "invasive_sppOnlyOutPa"
 
-fwrite(sppOnlyInPa, "SumTable/invasive_sppOnlyInPa.csv")
-fwrite(sppOnlyOutPa, "SumTable/invasive_sppOnlyOutPa.csv")
+fwrite(sppOnlyInPa, "cache/sumTable/ibra/invasive_sppOnlyInPa.csv")
+fwrite(sppOnlyOutPa, "cache/sumTable/ibra/invasive_sppOnlyOutPa.csv")
 
 rm(griis, Ind_pa, sppOnlyInPa, sppOnlyOutPa)
 
@@ -1448,7 +1452,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "invasive_sppOnlyInPa_new_species",
                        "invasive_sppOnlyInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_invasive_sppOnlyInPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_invasive_sppOnlyInPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
@@ -1500,7 +1504,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "invasive_sppOnlyOutPa_new_species",
                        "invasive_sppOnlyOutPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_invasive_sppOnlyOutPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_invasive_sppOnlyOutPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
@@ -1519,11 +1523,12 @@ sppByIbra <- unique(sppByIbra)
 
 sppByIbra1 <- setDT(sppByIbra)[, .(sppByIbra_wons = .N),
                                keyby = c("IBRA", "YearRange", "wons_status")]
+sppByIbra1 <- sppByIbra1 %>% 
+  dplyr::select(IBRA, YearRange, sppByIbra_wons)
 
-fwrite(sppByIbra1, "SumTable/sppByIbra_wons.csv")
+fwrite(sppByIbra1, "cache/sumTable/ibra/sppByIbra_wons.csv")
 
 rm(sppByIbra, sppByIbra1)
-
 
 # Wons Species first/last seen count
 wons <- ala %>%
@@ -1567,11 +1572,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "WoNS_new_species",
                        "WoNS_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_WoNS.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_WoNS.csv")
 
 rm(df_final, df_list, result_df, result_list, wons)
 
-# Number of introduced species inside indigeneous PA
+# Number of WoNS species inside indigenous PA
 wons <- ala %>%
   dplyr::select("IBRA", "YearRange", "species_guid", "wons_status", "indigenous_Status")
 
@@ -1593,7 +1598,7 @@ sppInPa <- sppInPa %>%
 
 colnames(sppInPa)[3] <- c("sppInIndPa_WoNS")
 
-fwrite(sppInPa, "SumTable/sppInIndPa_WoNS.csv")
+fwrite(sppInPa, "cache/sumTable/ibra/sppInIndPa_WoNS.csv")
 
 rm(wons, pa, sppInPa)
 
@@ -1642,7 +1647,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "WoNS_sppInIndPa_new_species",
                        "WoNS_sppInIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_WoNS_sppInInd.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_WoNS_sppInInd.csv")
 
 rm(wons, df_final, df_list, result_df, result_list, pa)
 
@@ -1673,8 +1678,8 @@ sppOnlyOutIndPa <- sppOnlyOutIndPa %>%
   dplyr::select(IBRA, YearRange, count)
 colnames(sppOnlyOutIndPa)[3] <- "WoNS_sppOnlyOutIndPa"
 
-fwrite(sppOnlyInIndPa, "SumTable/WoNS_sppOnlyInIndPa.csv")
-fwrite(sppOnlyOutIndPa, "SumTable/WoNS_sppOnlyOutIndPa.csv")
+fwrite(sppOnlyInIndPa, "cache/sumTable/ibra/WoNS_sppOnlyInIndPa.csv")
+fwrite(sppOnlyOutIndPa, "cache/sumTable/ibra/WoNS_sppOnlyOutIndPa.csv")
 
 rm(wons, Ind_pa, sppOnlyInIndPa, sppOnlyOutIndPa)
 
@@ -1722,7 +1727,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "WoNS_sppOnlyInIndPa_new_species",
                        "WoNS_sppOnlyInIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_WoNS_sppOnlyInIndPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_WoNS_sppOnlyInIndPa.csv")
 
 rm(wons, df_final, df_list, result_df, result_list, pa)
 
@@ -1771,7 +1776,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "WoNS_sppOnlyOutIndPa_new_species",
                        "WoNS_sppOnlyOutIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_WoNS_sppOnlyOutIndPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_WoNS_sppOnlyOutIndPa.csv")
 
 rm(wons, df_final, df_list, result_df, result_list, pa)
 
@@ -1797,7 +1802,7 @@ sppInPa <- sppInPa %>%
 
 colnames(sppInPa)[3] <- c("sppInPa_WoNS")
 
-fwrite(sppInPa, "SumTable/sppInPa_WoNS.csv")
+fwrite(sppInPa, "cache/sumTable/ibra/sppInPa_WoNS.csv")
 
 rm(wons, pa, sppInPa)
 
@@ -1846,7 +1851,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "WoNS_sppInPa_new_species",
                        "WoNS_sppInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_WoNS_sppInPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_WoNS_sppInPa.csv")
 
 rm(wons, df_final, df_list, result_df, result_list, pa)
 
@@ -1877,8 +1882,8 @@ sppOnlyOutPa <- sppOnlyOutPa %>%
   dplyr::select(IBRA, YearRange, count)
 colnames(sppOnlyOutPa)[3] <- "WoNS_sppOnlyOutPa"
 
-fwrite(sppOnlyInPa, "SumTable/WoNS_sppOnlyInPa.csv")
-fwrite(sppOnlyOutPa, "SumTable/WoNS_sppOnlyOutPa.csv")
+fwrite(sppOnlyInPa, "cache/sumTable/ibra/WoNS_sppOnlyInPa.csv")
+fwrite(sppOnlyOutPa, "cache/sumTable/ibra/WoNS_sppOnlyOutPa.csv")
 
 rm(wons, Ind_pa, sppOnlyInPa, sppOnlyOutPa)
 
@@ -1926,7 +1931,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "WoNS_sppOnlyInPa_new_species",
                        "WoNS_sppOnlyInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_WoNS_sppOnlyInPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_WoNS_sppOnlyInPa.csv")
 
 rm(wons, df_final, df_list, result_df, result_list, pa)
 
@@ -1975,7 +1980,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "WoNS_sppOnlyOutPa_new_species",
                        "WoNS_sppOnlyOutPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_WoNS_sppOnlyOutPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_WoNS_sppOnlyOutPa.csv")
 
 rm(wons, df_final, df_list, result_df, result_list, pa)
 
@@ -1998,8 +2003,10 @@ sppByIbra <- unique(sppByIbra)
 
 sppByIbra1 <- setDT(sppByIbra)[, .(sppByIbra_epbc = .N),
                                keyby = c("IBRA", "YearRange", "epbc_status")]
+sppByIbra1 <- sppByIbra1 %>% 
+  dplyr::select(IBRA, YearRange, sppByIbra_epbc)
 
-fwrite(sppByIbra1, "SumTable/sppByIbra_epbc.csv")
+fwrite(sppByIbra1, "cache/sumTable/ibra/sppByIbra_epbc.csv")
 
 rm(sppByIbra, sppByIbra1)
 
@@ -2046,7 +2053,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "epbc_new_species",
                        "epbc_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_epbc.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_epbc.csv")
 
 rm(df_final, df_list, result_df, result_list, epbc)
 
@@ -2072,11 +2079,11 @@ sppInPa <- sppInPa %>%
 
 colnames(sppInPa)[3] <- c("sppInIndPa_epbc")
 
-fwrite(sppInPa, "SumTable/sppInIndPa_epbc.csv")
+fwrite(sppInPa, "cache/sumTable/ibra/sppInIndPa_epbc.csv")
 
 rm(epbc, pa, sppInPa)
 
-# epbc species inside PA first/last seen count
+# epbc species inside indigenous PA first/last seen count
 epbc <- ala %>%
   dplyr::select("IBRA", "YearRange", "species_guid", "epbc_status", 
                 "indigenous_Status")
@@ -2121,11 +2128,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "epbc_sppInIndPa_new_species",
                        "epbc_sppInIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_epbc_sppInInd.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_epbc_sppInInd.csv")
 
 rm(epbc, df_final, df_list, result_df, result_list, pa)
 
-# epbc species which are either inside (not outside) or outside (not inside) indigeneous PAs
+# epbc species which are either inside (not outside) or outside (not inside) indigenous PAs
 epbc <- ala %>%
   dplyr::select("IBRA", "YearRange", "species_guid", "epbc_status", 
                 "indigenous_Status")
@@ -2152,8 +2159,8 @@ sppOnlyOutIndPa <- sppOnlyOutIndPa %>%
   dplyr::select(IBRA, YearRange, count)
 colnames(sppOnlyOutIndPa)[3] <- "epbc_sppOnlyOutIndPa"
 
-fwrite(sppOnlyInIndPa, "SumTable/epbc_sppOnlyInIndPa.csv")
-fwrite(sppOnlyOutIndPa, "SumTable/epbc_sppOnlyOutIndPa.csv")
+fwrite(sppOnlyInIndPa, "cache/sumTable/ibra/epbc_sppOnlyInIndPa.csv")
+fwrite(sppOnlyOutIndPa, "cache/sumTable/ibra/epbc_sppOnlyOutIndPa.csv")
 
 rm(epbc, Ind_pa, sppOnlyInIndPa, sppOnlyOutIndPa)
 
@@ -2201,7 +2208,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "epbc_sppOnlyInIndPa_new_species",
                        "epbc_sppOnlyInIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_epbc_sppOnlyInIndPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_epbc_sppOnlyInIndPa.csv")
 
 rm(epbc, df_final, df_list, result_df, result_list, pa)
 
@@ -2250,7 +2257,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "epbc_sppOnlyOutIndPa_new_species",
                        "epbc_sppOnlyOutIndPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_epbc_sppOnlyOutIndPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_epbc_sppOnlyOutIndPa.csv")
 
 rm(epbc, df_final, df_list, result_df, result_list, pa)
 
@@ -2276,7 +2283,7 @@ sppInPa <- sppInPa %>%
 
 colnames(sppInPa)[3] <- c("sppInPa_epbc")
 
-fwrite(sppInPa, "SumTable/sppInPa_epbc.csv")
+fwrite(sppInPa, "cache/sumTable/ibra/sppInPa_epbc.csv")
 
 rm(epbc, pa, sppInPa)
 
@@ -2325,7 +2332,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "epbc_sppInPa_new_species",
                        "epbc_sppInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_epbc_sppInPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_epbc_sppInPa.csv")
 
 rm(epbc, df_final, df_list, result_df, result_list, pa)
 
@@ -2356,8 +2363,8 @@ sppOnlyOutPa <- sppOnlyOutPa %>%
   dplyr::select(IBRA, YearRange, count)
 colnames(sppOnlyOutPa)[3] <- "epbc_sppOnlyOutPa"
 
-fwrite(sppOnlyInPa, "SumTable/epbc_sppOnlyInPa.csv")
-fwrite(sppOnlyOutPa, "SumTable/epbc_sppOnlyOutPa.csv")
+fwrite(sppOnlyInPa, "cache/sumTable/ibra/epbc_sppOnlyInPa.csv")
+fwrite(sppOnlyOutPa, "cache/sumTable/ibra/epbc_sppOnlyOutPa.csv")
 
 rm(epbc, Ind_pa, sppOnlyInPa, sppOnlyOutPa)
 
@@ -2405,7 +2412,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "epbc_sppOnlyInPa_new_species",
                        "epbc_sppOnlyInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_epbc_sppOnlyInPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_epbc_sppOnlyInPa.csv")
 
 rm(epbc, df_final, df_list, result_df, result_list, pa)
 
@@ -2454,16 +2461,14 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IBRA", "YearRange", "epbc_sppOnlyOutPa_new_species",
                        "epbc_sppOnlyOutPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_epbc_sppOnlyOutPa.csv")
+fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_epbc_sppOnlyOutPa.csv")
 
 rm(epbc, df_final, df_list, result_df, result_list, pa)
 
 
 ############################################
 # Merging datafiles
-list <- list.files(path = "SumTable", pattern = ".csv", full.names = TRUE)
-
-csv <- lapply(list, fread)
+list <- list.files(path = "cache/sumTable/ibra/", pattern = ".csv", full.names = TRUE)
 
 df1 <- fread(list[[1]])
 df2 <- fread(list[[2]])
@@ -2516,17 +2521,9 @@ df48 <- fread(list[[48]])
 df49 <- fread(list[[49]])
 df50 <- fread(list[[50]])
 df51 <- fread(list[[51]])
-df51 <- df51 %>%
-  dplyr::select(IBRA, YearRange, sppByIbra_epbc)
 df52 <- fread(list[[52]])
-df52 <- df52 %>%
-  dplyr::select(IBRA, YearRange, sppByIbra_introduced)
 df53 <- fread(list[[53]])
-df53 <- df53 %>%
-  dplyr::select(IBRA, YearRange, sppByIbra_invasive)
 df54 <- fread(list[[54]])
-df54 <- df54 %>%
-  dplyr::select(IBRA, YearRange, sppByIbra_wons)
 df55 <- fread(list[[55]])
 df56 <- fread(list[[56]])
 df57 <- fread(list[[57]])
@@ -2538,14 +2535,8 @@ df62 <- fread(list[[62]])
 df63 <- fread(list[[63]])
 df64 <- fread(list[[64]])
 df65 <- fread(list[[65]])
-df65 <- df65 %>%
-  dplyr::select(IBRA, YearRange, count)
-colnames(df65)[3] <- "sppOnlyInIndPa"
 df66 <- fread(list[[66]])
 df67 <- fread(list[[67]])
-df67 <- df67 %>%
-  dplyr::select(IBRA, YearRange, count)
-colnames(df67)[3] <- "sppOnlyOutIndPa"
 df68 <- fread(list[[68]])
 df69 <- fread(list[[69]])
 df70 <- fread(list[[70]])
@@ -2700,7 +2691,5 @@ df <- df %>%
 df <- df %>%
   dplyr::left_join(df73, by = c("IBRA", "YearRange"))
 
-View(df)
-
-write.csv(df, "SumTable/FullMerged.csv")
+write.csv(df, "cache/sumTable/fullMerged_ibra.csv")
 
