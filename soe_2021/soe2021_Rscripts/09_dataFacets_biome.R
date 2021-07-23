@@ -4,7 +4,7 @@ library(data.table)
 library(dplyr)
 
 # Merging data
-input_folder <- "cache/Merged/Biome/" # folder that contains all the csvs
+input_folder <- "cache/merged/biome/" # folder that contains all the csvs
 data <- dir(input_folder, "^.*\\.csv$", full.names = TRUE) # create file names of all the csvs
 ala <- plyr::ldply(data, data.table::fread)
 

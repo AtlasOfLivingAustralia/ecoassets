@@ -10,100 +10,72 @@ library(galah)
 library(plyr)
 
 # Cross-checking GRIIS dataset
-griis_list <- fread("GRIIS_Aus.csv")
-
+griis_list <- fread("cache/otherAttributes/griis.csv")
 griis_ala_original <- select_taxa(griis_list$species)
-griis_ala <- griis_ala_original %>%
-  filter(match_type == "exactMatch", issues == "noIssue")
-
+griis_ala <- subset(griis_ala_original, (match_type == "exactMatch") & (issues == "noIssue"))
 griis_ala <- griis_ala[!is.na(griis_ala$species), ]
 griis <- merge(griis_list,
                griis_ala[, c("search_term", "taxon_concept_id")],
                by.x = "species", by.y = "search_term",
                all = FALSE)
-
 griis <- griis %>%
   dplyr::select(species, habitat, occurrenceStatus, establishmentMeans, isInvasive)
 griis <- griis %>%
-  mutate(griis_status = ifelse(isInvasive == "NULL", "introduced", "invasive"))
+  dplyr::mutate(griis_status = ifelse(isInvasive == "NULL", "introduced", "invasive"))
 
 # Cross-checking WoNS dataset
-wons_list <- fread("Weeds_of_National_Significance_(WoNS)_as_at_Feb._2013.csv")
-
+wons_list <- fread("cache/otherAttributes/wons.csv")
 wons_original <- select_taxa(wons_list$scientificName)
-wons_ala <- wons_original %>%
-  filter(match_type == "exactMatch", issues == "noIssue")
-
+wons_ala <- subset(wons_original, (match_type == "exactMatch") & (issues == "noIssue"))
 wons_ala <- wons_ala[!is.na(wons_ala$species), ]
 wons <- merge(wons_list,
               wons_ala[, c("search_term", "taxon_concept_id")],
               by.x = "scientificName", by.y = "search_term",
               all = FALSE)
-
 wons <- wons %>%
   dplyr::select(scientificName)
-
 colnames(wons) <- c("species")
-
 wons <- wons %>%
   dplyr::mutate(WoNS = "WoNS")
-
 wons <- wons[wons$species != "", ]
 
 # Cross-checking EPBC list
-epbc <- fread("EPBC_list.csv")
-
-#threatened_ala <- select_taxa(threatened_list$scientific_name)
-epbc <- epbc[!is.na(epbc$scientific_name), ]
+threatened_list <- fread("cache/otherAttributes/epbc.csv")
+# threatened_ala <- select_taxa(threatened_list$scientific_name)
+# threatened_ala <- threatened_ala[!is.na(threatened_ala$species), ]
 # epbc <- merge(threatened_list,
-#               threatened_ala[, c("search_term", "taxon_concept_id")],
-#               by.x = "scientific_name", by.y = "search_term",
-#               all = FALSE)
+#                        threatened_ala[, c("search_term", "taxon_concept_id")],
+#                        by.x = "scientific_name", by.y = "search_term",
+#                        all = FALSE)
 
-epbc <- epbc %>%
+epbc <- threatened_list %>%
   dplyr::select(scientific_name, conservation_status, date_effective)
-
 colnames(epbc) <- c("species", "conservation_status", "date_effective")
 epbc <- epbc %>%
-  dplyr::mutate(epbc = "epbc")
+  dplyr::mutate(epbc = "Yes")
 
 rm(threatened_ala, threatened_df, threatened_list, wons_ala, wons_list, wons_original,
    griis_list, griis_ala, griis_ala_original)
-
 ##########################################################################
 # Terrestrial
-files <- c("cache/Intersect/Biome/df1_intersect_biome.csv",
-           "cache/Intersect/Biome/df2_intersect_biome.csv",
-           "cache/Intersect/Biome/df3_intersect_biome.csv",
-           "cache/Intersect/Biome/df4_intersect_biome.csv",
-           "cache/Intersect/Biome/df5_intersect_biome.csv",
-           "cache/Intersect/Biome/df6_intersect_biome.csv",
-           "cache/Intersect/Biome/df7_intersect_biome.csv",
-           "cache/Intersect/Biome/df8_intersect_biome.csv",
-           "cache/Intersect/Biome/df9_intersect_biome.csv",
-           "cache/Intersect/Biome/df10_intersect_biome.csv",
-           "cache/Intersect/Biome/df11_intersect_biome.csv",
-           "cache/Intersect/Biome/df12_intersect_biome.csv")
+files <- c("cache/intersect/biome/df1_intersect_biome.csv",
+           "cache/intersect/biome/df2_intersect_biome.csv",
+           "cache/intersect/biome/df3_intersect_biome.csv",
+           "cache/intersect/biome/df4_intersect_biome.csv",
+           "cache/intersect/biome/df5_intersect_biome.csv",
+           "cache/intersect/biome/df6_intersect_biome.csv",
+           "cache/intersect/biome/df7_intersect_biome.csv",
+           "cache/intersect/biome/df8_intersect_biome.csv",
+           "cache/intersect/biome/df9_intersect_biome.csv",
+           "cache/intersect/biome/df10_intersect_biome.csv",
+           "cache/intersect/biome/df11_intersect_biome.csv",
+           "cache/intersect/biome/df12_intersect_biome.csv",
+           "cache/intersect/biome/df13_intersect_biome.csv",
+           "cache/intersect/biome/df14_intersect_biome.csv")
 
-n_threads <- 12
-cl <- makeCluster(n_threads, "PSOCK") # create workers
-clusterEvalQ(cl, { # load packages into workers
-  library(data.table)
-  library(dplyr)
-  library(parallel)
-  library(readr)
-  library(plyr)
-})
-clusterExport(cl, c("griis", "wons", "epbc"))
-
-# Main processing
-result <- parLapply(cl, files, function(i) {
+for(i in files) {
 
   ala <- fread(i, header = T)
-
-
-  # Removing blank cells
-  ala <- ala[!(is.na(ala$species_guid) | ala$species_guid == ""),]
 
   colnames(ala)[19:23] <- paste(
     "CAPAD2020",
@@ -144,14 +116,16 @@ result <- parLapply(cl, files, function(i) {
     mutate(wons_status = ifelse(is.na(WoNS), "Other", WoNS),
            WoNS = ifelse(is.na(WoNS), "Other", WoNS))
 
-  file <- gsub("cache/Intersect/Biome/", "", i)
+  ala1 <- ala1 %>%
+    dplyr::select(speciesID, year, basisOfRecord,
+                  B_NAME, CAPAD_Status, wons_status, griis_status,
+                  conservation_status, NRM, indigenous_Status)
+  
+  file <- gsub("cache/intersect/biome/", "", i)
   file <- gsub("_intersect_biome.csv", "", file)
 
-  fwrite(ala1, file = paste0("cache/Merged/Biome/", file, "_merged.csv"), row.names = FALSE, quote = TRUE)
+  fwrite(ala1, file = paste0("cache/merged/biome/", file, "_merged.csv"), row.names = FALSE, quote = TRUE)
 
   rm(ala, ala1)
 
-})
-
-# Stop cluster
-cl <- stopCluster(cl)
+}
