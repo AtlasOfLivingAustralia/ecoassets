@@ -2,11 +2,9 @@ library(tidyverse)
 library(patchwork)
 library(data.table)
 
-biome <- fread("Biome_merged.csv")
+biome <- fread("cache/sumTable/biome_merged.csv")
 
-colnames(biome)[8] <- "sppInPa"
-colnames(biome)[13] <- "sppOutPa"
-
+# Subset data frames for the calculation purpose
 overall <- biome %>%
   dplyr::select(biome, YearRange, sppByBiome, sppInPa, sppOutPa)
 overall <- overall %>%
@@ -49,7 +47,7 @@ invasive <- invasive %>%
   mutate(overall = paste0(round(sppByBiome_invasive/sppByBiome*100, 2), "%"), 
          sppInPa_per = paste0(round(sppInPa_invasive/sppByBiome*100, 2), "%"), 
          sppOutPa_per = paste0(round(sppOutPa_invasive/sppByBiome*100, 2), "%"),
-         group = "invasive species")
+         group = "Invasive species")
 invasive <- invasive %>%
   dplyr::select(biome, YearRange, group, overall, sppInPa_per, sppOutPa_per)
 
@@ -66,23 +64,19 @@ wons <- wons %>%
 
 ###############################
 df <- rbind(overall, epbc, introduced, invasive, wons)
-head(df)
 
 colnames(df) <- c("biome", "YearRange", "group", "overall", "sppInPa", "sppOutPa")
-
-head(df)
-
 df1 <- df %>%
   tidyr::pivot_longer(
     cols = c("overall", "sppInPa", "sppOutPa"),
     names_to = "status",
     values_to = "percentages")
-head(df1)
+fwrite(df1, "cache/sumTable/biome_summary.csv")
 
-fwrite(df1, "biome_revised.csv")
+# Removing 'overall' values from the group column
+df1 <- subset(df1, (group != "Overall"))
 
-df1 <- fread("biome_revised.csv")
-
+# Creating plots
 ggplot(df1) +
   geom_line(aes(x = YearRange, y = percentages, group = status, colour = status)) +
   theme_bw() +
@@ -96,34 +90,51 @@ df1 %>%
   ggplot( aes(x = YearRange, y = percentages, group = status, colour = status)) +
   geom_line() +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), legend.title = element_blank()) +
-  xlab("") + ylab("Proportion of species") + facet_grid(cols = vars(biome), rows = vars(group), scales = "free_y", labeller = label_wrap_gen(width=10)) +
-  scale_colour_manual(values = c("green4", "blue", "black"))
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), legend.title = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        #strip.background = element_blank(),
+        strip.text = element_text(hjust = 0)) +
+  labs(x = "", y = "Percentages of species", title = "EPBC listed species") + facet_wrap(~biome, nrow = 1, labeller = label_wrap_gen(width=10)) +
+  scale_colour_manual(values = c("green4", "blue", "black")) + ggsave("cache/figures/epbc_revised.png")
 
 df1 %>%
   dplyr::filter(group == "Introduced species") %>% 
   ggplot( aes(x = YearRange, y = percentages, group = status, colour = status)) +
   geom_line() +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), legend.title = element_blank()) +
-  xlab("") + ylab("Proportion of species") + facet_grid(cols = vars(biome), rows = vars(group), scales = "free_y", labeller = label_wrap_gen(width=10)) +
-  scale_colour_manual(values = c("green4", "blue", "black"))
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), legend.title = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        #strip.background = element_blank(),
+        strip.text = element_text(hjust = 0)) +
+  labs(x = "", y = "Percentages of species", title = "Introduced species") + facet_wrap(~biome, nrow = 1, labeller = label_wrap_gen(width=10)) +
+  scale_colour_manual(values = c("green4", "blue", "black")) + ggsave("cache/figures/introduced_revised.png")
 
 df1 %>%
   dplyr::filter(group == "Invasive species") %>% 
   ggplot( aes(x = YearRange, y = percentages, group = status, colour = status)) +
   geom_line() +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), legend.title = element_blank()) +
-  xlab("") + ylab("Proportion of species") + facet_grid(cols = vars(biome), rows = vars(group), scales = "free_y", labeller = label_wrap_gen(width=10)) +
-  scale_colour_manual(values = c("green4", "blue", "black"))
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), legend.title = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        #strip.background = element_blank(),
+        strip.text = element_text(hjust = 0)) +
+  labs(x = "", y = "Percentages of species", title = "Invasive species") + facet_wrap(~biome, nrow = 1, labeller = label_wrap_gen(width=10)) +
+  scale_colour_manual(values = c("green4", "blue", "black")) + ggsave("cache/figures/invasive_revised.png")
 
 df1 %>%
   dplyr::filter(group == "Weeds of national significance") %>% 
   ggplot( aes(x = YearRange, y = percentages, group = status, colour = status)) +
   geom_line() +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), legend.title = element_blank()) +
-  xlab("") + ylab("Proportion of species") + facet_grid(cols = vars(biome), rows = vars(group), scales = "free_y", labeller = label_wrap_gen(width=10)) +
-  scale_colour_manual(values = c("green4", "blue", "black"))
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), legend.title = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        #strip.background = element_blank(),
+        strip.text = element_text(hjust = 0)) +
+  labs(x = "", y = "Percentages of species", title = "Weeds of national significance") + facet_wrap(~biome, nrow = 1, labeller = label_wrap_gen(width=10)) +
+  scale_colour_manual(values = c("green4", "blue", "black")) + ggsave("cache/figures/wons_revised.png")
+
 

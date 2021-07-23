@@ -8,11 +8,11 @@ input_folder <- "cache/merged/biome/" # folder that contains all the csvs
 data <- dir(input_folder, "^.*\\.csv$", full.names = TRUE) # create file names of all the csvs
 ala <- plyr::ldply(data, data.table::fread)
 
-colnames(ala)[18] <- c("CM_Zone")
+colnames(ala)[9] <- c("CM_Zone")
 
 # Subsetting data
 ala <- ala %>%
-  dplyr::select(species_guid, year, basisOfRecord,
+  dplyr::select(speciesID, year, basisOfRecord,
                 B_NAME, CAPAD_Status, wons_status, griis_status,
                 conservation_status, CM_Zone, indigenous_Status)
 
@@ -25,6 +25,7 @@ colnames(ala) <- c("species_guid", "year", "basisOfRecord",
 ala <- ala[!(is.na(ala$species_guid) | ala$species_guid == ""),]
 ala <- ala[!(is.na(ala$biome) | ala$biome == ""),]
 
+# Total records: 66,675,031
 
 # Group years into 5-year ranges
 ala <- ala %>%
@@ -39,6 +40,9 @@ levels(ala$YearRange) <- c("1900-1980" ,paste(
 # Removing blank cells
 ala <- ala[!(is.na(ala$YearRange) | ala$YearRange == ""),]
 
+ala <- ala %>% 
+  dplyr::select(species_guid, YearRange, biome, capad_status, wons_status, griis_status, conservation_status)
+
 ################################
 # Species count by biome
 sppByBiome <- ala %>%
@@ -49,7 +53,7 @@ setkey(sppByBiome,NULL)
 sppByBiome <- unique(sppByBiome)
 
 sppByBiome <- setDT(sppByBiome)[, .(sppByBiome = .N), keyby = c("biome", "YearRange")]
-fwrite(sppByBiome, "SumTable/sppByBiome.csv")
+fwrite(sppByBiome, "cache/sumTable/biome/sppByBiome.csv")
 rm(sppByBiome)
 
 
@@ -74,10 +78,11 @@ sppOutPa <- pa %>%
 
 sppOutPa <- sppOutPa %>%
   dplyr::select(biome, YearRange, sppInPa)
+colnames(sppOutPa)[3] <- "sppOutPa"
 
 
-fwrite(sppInPa, "SumTable/sppInPa.csv")
-fwrite(sppOutPa, "SumTable/sppOutPa.csv")
+fwrite(sppInPa, "cache/sumTable/biome/sppInPa.csv")
+fwrite(sppOutPa, "cache/sumTable/biome/sppOutPa.csv")
 
 
 rm(pa, sppInPa, sppOutPa)
@@ -100,7 +105,9 @@ sppByBiome <- unique(sppByBiome)
 sppByBiome <- setDT(sppByBiome)[, .(sppByBiome_introduced = .N),
                                keyby = c("biome", "YearRange", "griis_status")]
 
-fwrite(sppByBiome, "SumTable/sppByBiome_introduced.csv")
+sppByBiome <- sppByBiome %>% 
+  dplyr::select(biome, YearRange, sppByBiome_introduced)
+fwrite(sppByBiome, "cache/sumTable/biome/sppByBiome_introduced.csv")
 
 rm(sppByBiome)
 
@@ -136,8 +143,8 @@ sppOutPa <- sppOutPa %>%
 
 colnames(sppOutPa)[3] <- c("sppOutPa_introduced")
 
-fwrite(sppInPa, "SumTable/sppInPa_introduced.csv")
-fwrite(sppOutPa, "SumTable/sppOutPa_introduced.csv")
+fwrite(sppInPa, "cache/sumTable/biome/sppInPa_introduced.csv")
+fwrite(sppOutPa, "cache/sumTable/biome/sppOutPa_introduced.csv")
 
 rm(griis, pa, sppInPa, sppOutPa)
 
@@ -160,8 +167,9 @@ sppByBiome <- unique(sppByBiome)
 
 sppByBiome <- setDT(sppByBiome)[, .(sppByBiome_invasive = .N),
                                keyby = c("biome", "YearRange", "griis_status")]
-
-fwrite(sppByBiome, "SumTable/sppByBiome_invasive.csv")
+sppByBiome <- sppByBiome %>% 
+  dplyr::select(biome, YearRange, sppByBiome_invasive)
+fwrite(sppByBiome, "cache/sumTable/biome/sppByBiome_invasive.csv")
 
 rm(sppByBiome)
 
@@ -198,8 +206,8 @@ sppOutPa <- sppOutPa %>%
 
 colnames(sppOutPa)[3] <- c("sppOutPa_invasive")
 
-fwrite(sppInPa, "SumTable/sppInPa_invasive.csv")
-fwrite(sppOutPa, "SumTable/sppOutPa_invasive.csv")
+fwrite(sppInPa, "cache/sumTable/biome/sppInPa_invasive.csv")
+fwrite(sppOutPa, "cache/sumTable/biome/sppOutPa_invasive.csv")
 
 rm(griis, pa, sppInPa, sppOutPa)
 
@@ -218,8 +226,10 @@ sppByBiome <- unique(sppByBiome)
 
 sppByBiome <- setDT(sppByBiome)[, .(sppByBiome_wons = .N),
                                keyby = c("biome", "YearRange", "wons_status")]
+sppByBiome <- sppByBiome %>% 
+  dplyr::select(biome, YearRange, sppByBiome_wons)
 
-fwrite(sppByBiome, "SumTable/sppByBiome_wons.csv")
+fwrite(sppByBiome, "cache/sumTable/biome/sppByBiome_wons.csv")
 
 rm(sppByBiome)
 
@@ -254,8 +264,8 @@ sppOutPa <- sppOutPa %>%
 colnames(sppOutPa)[3] <- c("sppOutPa_WoNS")
 
 
-fwrite(sppInPa, "SumTable/sppInPa_WoNS.csv")
-fwrite(sppOutPa, "SumTable/sppOutPa_WoNS.csv")
+fwrite(sppInPa, "cache/sumTable/biome/sppInPa_WoNS.csv")
+fwrite(sppOutPa, "cache/sumTable/biome/sppOutPa_WoNS.csv")
 
 rm(wons, pa, sppInPa, sppOutPa)
 
@@ -278,10 +288,12 @@ sppByBiome <- unique(sppByBiome)
 
 sppByBiome <- setDT(sppByBiome)[, .(sppByBiome_epbc = .N),
                                keyby = c("biome", "YearRange", "epbc_status")]
+sppByBiome <- sppByBiome %>% 
+  dplyr::select(biome, YearRange, sppByBiome_epbc)
 
-fwrite(sppByBiome, "SumTable/sppByBiome_epbc.csv")
+fwrite(sppByBiome, "cache/sumTable/biome/sppByBiome_epbc.csv")
 
-rm(sppByIbra, sppByIbra1)
+rm(sppByBiome)
 
 # Number of epbc species inside/outside PA
 epbc <- ala %>%
@@ -313,28 +325,20 @@ sppOutPa <- sppOutPa %>%
 
 colnames(sppOutPa)[3] <- c("sppOutPa_epbc")
 
-fwrite(sppInPa, "SumTable/sppInPa_epbc.csv")
-fwrite(sppOutPa, "SumTable/sppOutPa_epbc.csv")
+fwrite(sppInPa, "cache/sumTable/biome/sppInPa_epbc.csv")
+fwrite(sppOutPa, "cache/sumTable/biome/sppOutPa_epbc.csv")
 
 rm(epbc, pa, sppInPa, sppOutPa)
 
 ################################################
 # Merging datafiles
-list <- list.files(path = "SumTable/Biome", pattern = ".csv", full.names = TRUE)
+list <- list.files(path = "cache/sumTable/biome/", pattern = ".csv", full.names = TRUE)
 
 df1 <- fread(list[[1]])
 df2 <- fread(list[[2]])
-df2 <- df2 %>%
-  dplyr::select(biome, YearRange, sppByBiome_epbc)
 df3 <- fread(list[[3]])
-df3 <- df3 %>%
-  dplyr::select(biome, YearRange, sppByBiome_introduced)
 df4 <- fread(list[[4]])
-df4 <- df4 %>%
-  dplyr::select(biome, YearRange, sppByBiome_invasive)
 df5 <- fread(list[[5]])
-df5 <- df5 %>%
-  dplyr::select(biome, YearRange, sppByBiome_wons)
 df6 <- fread(list[[6]])
 df7 <- fread(list[[7]])
 df8 <- fread(list[[8]])
@@ -375,3 +379,4 @@ df <- df %>%
 df <- df %>%
   dplyr::left_join(df15, by = c("biome", "YearRange"))
 
+fwrite(df, "cache/sumTable/biome_merged.csv")
