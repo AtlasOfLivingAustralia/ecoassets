@@ -1,18 +1,18 @@
 options(java.parameters = "-Xmx6g")
 
-library(data.table)
-library(dplyr)
+lIMCRAry(data.table)
+lIMCRAry(dplyr)
 
 # Merging data
-input_folder <- "cache/Merged/Marine/" # folder that contains all the csvs
+input_folder <- "cache/merged/marine/" # folder that contains all the csvs
 data <- dir(input_folder, "^.*\\.csv$", full.names = TRUE) # create file names of all the csvs
 ala <- plyr::ldply(data, data.table::fread)
 
-colnames(ala)[18] <- c("CM_Zone")
+colnames(ala)[9] <- c("CM_Zone")
 
 # Subsetting data
 ala <- ala %>%
-  dplyr::select(species_guid, year, basisOfRecord,
+  dplyr::select(speciesID, year, basisOfRecord,
                 IMCRA, CAPAD_Status, wons_status, griis_status,
                 conservation_status, CM_Zone)
 
@@ -45,7 +45,7 @@ occByIMCRA <- ala %>%
   dplyr::select("IMCRA", "YearRange")
 occByIMCRA <- setDT(occByIMCRA)[, .(occByIMCRA = .N), keyby = c("IMCRA", "YearRange")]
 
-fwrite(occByIMCRA, "SumTable/occByIMCRA.csv")
+fwrite(occByIMCRA, "cache/sumTable/imcra/occByIMCRA.csv")
 
 rm(occByIMCRA)
 
@@ -58,7 +58,7 @@ setkey(sppByIMCRA,NULL)
 sppByIMCRA <- unique(sppByIMCRA)
 
 sppByIMCRA <- setDT(sppByIMCRA)[, .(sppByIMCRA = .N), keyby = c("IMCRA", "YearRange")]
-fwrite(sppByIMCRA, "SumTable/sppByIMCRA.csv")
+fwrite(sppByIMCRA, "cache/sumTable/imcra/sppByIMCRA.csv")
 rm(sppByIMCRA)
 
 # Number of citizen science records
@@ -66,7 +66,7 @@ cs <- ala %>%
   dplyr::select(IMCRA, YearRange, basisOfRecord)
 
 cs <- cs %>%
-  dplyr::mutate(basisOfRecord = ifelse(basisOfRecord == "HumanObservation", "CitizenScience", "OtherSource"))
+  dplyr::mutate(basisOfRecord = ifelse(basisOfRecord == "HUMAN_OBSERVATION", "CitizenScience", "OtherSource"))
 cs <- cs %>%
   dplyr::filter(basisOfRecord == "CitizenScience")
 
@@ -75,7 +75,7 @@ cs <- setDT(cs)[, .(CS_records = .N), keyby = c("IMCRA", "YearRange", "basisOfRe
 cs <- cs %>%
   dplyr::select(IMCRA, YearRange, CS_records)
 
-fwrite(cs, "SumTable/NumberOfCitizenScienceRecords.csv")
+fwrite(cs, "cache/sumTable/imcra/NumberOfCitizenScienceRecords.csv")
 rm(cs)
 
 # Species first/last seen count
@@ -115,7 +115,7 @@ df_final$YearRange <- factor(
 df_final <- df_final %>%
   dplyr::select(IMCRA, YearRange, new_species, last_seen_species)
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved.csv")
 
 rm(ala_simple, df_final, df_list, result_df, result_list, data, input_folder)
 
@@ -135,7 +135,7 @@ sppInPa <- pa %>%
 sppInPa <- sppInPa %>%
   dplyr::select(IMCRA, YearRange, sppInPa)
 
-fwrite(sppInPa, "SumTable/sppInPa.csv")
+fwrite(sppInPa, "cache/sumTable/imcra/sppInPa.csv")
 
 rm(pa, sppInPa)
 
@@ -180,7 +180,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "sppInPa_new_species",
                        "sppInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_sppInPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_sppInPa.csv")
 
 rm(df_final, df_list, result_df, result_list, pa)
 
@@ -207,8 +207,8 @@ sppOnlyOutPa <- sppOnlyOutPa %>%
 colnames(sppOnlyOutPa)[3] <- "sppOnlyOutPa"
 
 
-fwrite(sppOnlyInPa, "SumTable/sppOnlyInPa.csv")
-fwrite(sppOnlyOutPa, "SumTable/sppOnlyOutPa.csv")
+fwrite(sppOnlyInPa, "cache/sumTable/imcra/sppOnlyInPa.csv")
+fwrite(sppOnlyOutPa, "cache/sumTable/imcra/sppOnlyOutPa.csv")
 
 rm(pa, sppOnlyInPa, sppOnlyOutPa)
 
@@ -253,11 +253,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "sppOnlyInPa_new_species",
                        "sppOnlyInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_sppOnlyInPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_sppOnlyInPa.csv")
 
 rm(df_final, df_list, result_df, result_list, pa)
 
-# Species distributed only inside (not outside) PA first/last seen count
+# Species distributed only outside (not inside) PA first/last seen count
 pa <- ala %>%
   dplyr::select(IMCRA, species_guid, YearRange, capad_status)
 
@@ -298,7 +298,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "sppOnlyOutPa_new_species",
                        "sppOnlyOutPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_sppOnlyOutPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_sppOnlyOutPa.csv")
 
 rm(df_final, df_list, result_df, result_list, pa)
 
@@ -313,7 +313,6 @@ sppByIMCRA <- sppByIMCRA %>%
 sppByIMCRA <- sppByIMCRA %>%
   dplyr::filter(griis_status == "introduced")
 
-
 # Removing duplicates
 setkey(sppByIMCRA,NULL)
 sppByIMCRA <- unique(sppByIMCRA)
@@ -321,8 +320,10 @@ sppByIMCRA <- unique(sppByIMCRA)
 
 sppByIMCRA1 <- setDT(sppByIMCRA)[, .(sppByIMCRA_introduced = .N),
                                keyby = c("IMCRA", "YearRange", "griis_status")]
+sppByIMCRA1 <- sppByIMCRA1 %>% 
+  dplyr::select(IMCRA, YearRange, sppByIMCRA_introduced)
 
-fwrite(sppByIMCRA1, "SumTable/sppByIMCRA_introduced.csv")
+fwrite(sppByIMCRA1, "cache/sumTable/imcra/sppByIMCRA_introduced.csv")
 
 rm(sppByIMCRA, sppByIMCRA1)
 
@@ -344,7 +345,6 @@ griis <- griis %>%
 
 griis$YearRange <- as.numeric(griis$YearRange)
 df_final <- griis[, .(.N), keyby = c("IMCRA", "YearRange")]
-
 
 df_list <- split(df_final, seq_len(nrow(df_final)))
 result_list <- lapply(df_list, function(a, x){
@@ -373,7 +373,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "introduced_new_species",
                        "introduced_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_introduced.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_introduced.csv")
 
 rm(df_final, df_list, result_df, result_list, griis)
 
@@ -401,7 +401,7 @@ sppInPa <- sppInPa %>%
 
 colnames(sppInPa)[3] <- c("sppInPa_introduced")
 
-fwrite(sppInPa, "SumTable/sppInPa_introduced.csv")
+fwrite(sppInPa, "cache/sumTable/imcra/sppInPa_introduced.csv")
 
 rm(griis, pa, sppInPa)
 
@@ -453,12 +453,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "introduced_sppInPa_new_species",
                        "introduced_sppInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_introduced_sppInPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_introduced_sppInPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
-# Introduced species which are either inside (not outside) or outside 
-# (not inside) PAs
+# Introduced species which are either inside (not outside) or outside (not inside) PAs
 griis <- ala %>%
   dplyr::select("IMCRA", "YearRange", "species_guid", "griis_status", 
                 "capad_status")
@@ -487,8 +486,8 @@ sppOnlyOutPa <- sppOnlyOutPa %>%
   dplyr::select(IMCRA, YearRange, count)
 colnames(sppOnlyOutPa)[3] <- "introduced_sppOnlyOutPa"
 
-fwrite(sppOnlyInPa, "SumTable/introduced_sppOnlyInPa.csv")
-fwrite(sppOnlyOutPa, "SumTable/introduced_sppOnlyOutPa.csv")
+fwrite(sppOnlyInPa, "cache/sumTable/imcra/introduced_sppOnlyInPa.csv")
+fwrite(sppOnlyOutPa, "cache/sumTable/imcra/introduced_sppOnlyOutPa.csv")
 
 rm(griis, Ind_pa, sppOnlyInPa, sppOnlyOutPa)
 
@@ -539,11 +538,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "introduced_sppOnlyInPa_new_species",
                        "introduced_sppOnlyInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_introduced_sppOnlyInPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_introduced_sppOnlyInPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
-# Introduced species distributed only outside (not outside) PA first/last seen count
+# Introduced species distributed only outside (not inside) PA first/last seen count
 griis <- ala %>%
   dplyr::select("IMCRA", "YearRange", "species_guid", "griis_status", "capad_status")
 
@@ -590,7 +589,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "introduced_sppOnlyOutPa_new_species",
                        "introduced_sppOnlyOutPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_introduced_sppOnlyOutPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_introduced_sppOnlyOutPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
@@ -613,8 +612,10 @@ sppByIMCRA <- unique(sppByIMCRA)
 
 sppByIMCRA1 <- setDT(sppByIMCRA)[, .(sppByIMCRA_invasive = .N),
                                keyby = c("IMCRA", "YearRange", "griis_status")]
+sppByIMCRA1 <- sppByIMCRA1 %>% 
+  dplyr::select(IMCRA, YearRange, sppByIMCRA_invasive)
 
-fwrite(sppByIMCRA1, "SumTable/sppByIMCRA_invasive.csv")
+fwrite(sppByIMCRA1, "cache/sumTable/imcra/sppByIMCRA_invasive.csv")
 
 rm(sppByIMCRA, sppByIMCRA1)
 
@@ -664,7 +665,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "invasive_new_species",
                        "invasive_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_invasive.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_invasive.csv")
 
 rm(df_final, df_list, result_df, result_list, griis)
 
@@ -692,7 +693,7 @@ sppInPa <- sppInPa %>%
 
 colnames(sppInPa)[3] <- c("sppInPa_invasive")
 
-fwrite(sppInPa, "SumTable/sppInPa_invasive.csv")
+fwrite(sppInPa, "cache/sumTable/imcra/sppInPa_invasive.csv")
 
 rm(griis, pa, sppInPa)
 
@@ -744,12 +745,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "invasive_sppInPa_new_species",
                        "invasive_sppInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_invasive_sppInPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_invasive_sppInPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
-# Invasive species which are either inside (not outside) or outside 
-# (not inside) PAs
+# Invasive species which are either inside (not outside) or outside (not inside) PAs
 griis <- ala %>%
   dplyr::select("IMCRA", "YearRange", "species_guid", "griis_status", 
                 "capad_status")
@@ -778,8 +778,8 @@ sppOnlyOutPa <- sppOnlyOutPa %>%
   dplyr::select(IMCRA, YearRange, count)
 colnames(sppOnlyOutPa)[3] <- "invasive_sppOnlyOutPa"
 
-fwrite(sppOnlyInPa, "SumTable/invasive_sppOnlyInPa.csv")
-fwrite(sppOnlyOutPa, "SumTable/invasive_sppOnlyOutPa.csv")
+fwrite(sppOnlyInPa, "cache/sumTable/imcra/invasive_sppOnlyInPa.csv")
+fwrite(sppOnlyOutPa, "cache/sumTable/imcra/invasive_sppOnlyOutPa.csv")
 
 rm(griis, Ind_pa, sppOnlyInPa, sppOnlyOutPa)
 
@@ -830,9 +830,10 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "invasive_sppOnlyInPa_new_species",
                        "invasive_sppOnlyInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_invasive_sppOnlyInPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_invasive_sppOnlyInPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
+
 
 # Invasive species distributed only outside (not inside) PA first/last seen count
 griis <- ala %>%
@@ -881,10 +882,9 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "invasive_sppOnlyOutPa_new_species",
                        "invasive_sppOnlyOutPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_invasive_sppOnlyOutPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_invasive_sppOnlyOutPa.csv")
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
-
 
 ##############################################################
 # Number of wons species by IMCRA regions
@@ -901,11 +901,12 @@ sppByIMCRA <- unique(sppByIMCRA)
 
 sppByIMCRA1 <- setDT(sppByIMCRA)[, .(sppByIMCRA_wons = .N),
                                keyby = c("IMCRA", "YearRange", "wons_status")]
+sppByIMCRA1 <- sppByIMCRA1 %>% 
+  dplyr::select(IMCRA, YearRange, sppByIMCRA_wons)
 
-fwrite(sppByIMCRA1, "SumTable/sppByIMCRA_wons.csv")
+fwrite(sppByIMCRA1, "cache/sumTable/imcra/sppByIMCRA_wons.csv")
 
 rm(sppByIMCRA, sppByIMCRA1)
-
 
 # Wons Species first/last seen count
 wons <- ala %>%
@@ -949,7 +950,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "WoNS_new_species",
                        "WoNS_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_WoNS.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_WoNS.csv")
 
 rm(df_final, df_list, result_df, result_list, wons)
 
@@ -974,7 +975,7 @@ sppInPa <- sppInPa %>%
 
 colnames(sppInPa)[3] <- c("sppInPa_WoNS")
 
-fwrite(sppInPa, "SumTable/sppInPa_WoNS.csv")
+fwrite(sppInPa, "cache/sumTable/imcra/sppInPa_WoNS.csv")
 
 rm(wons, pa, sppInPa)
 
@@ -1023,12 +1024,11 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "WoNS_sppInPa_new_species",
                        "WoNS_sppInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_WoNS_sppInPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_WoNS_sppInPa.csv")
 
 rm(wons, df_final, df_list, result_df, result_list, pa)
 
-# WoNS species which are either inside (not outside) or outside 
-# (not inside) PAs
+# WoNS species which are either inside (not outside) or outside (not inside) PAs
 wons <- ala %>%
   dplyr::select("IMCRA", "YearRange", "species_guid", "wons_status", 
                 "capad_status")
@@ -1054,8 +1054,8 @@ sppOnlyOutPa <- sppOnlyOutPa %>%
   dplyr::select(IMCRA, YearRange, count)
 colnames(sppOnlyOutPa)[3] <- "WoNS_sppOnlyOutPa"
 
-fwrite(sppOnlyInPa, "SumTable/WoNS_sppOnlyInPa.csv")
-fwrite(sppOnlyOutPa, "SumTable/WoNS_sppOnlyOutPa.csv")
+fwrite(sppOnlyInPa, "cache/sumTable/imcra/WoNS_sppOnlyInPa.csv")
+fwrite(sppOnlyOutPa, "cache/sumTable/imcra/WoNS_sppOnlyOutPa.csv")
 
 rm(wons, Ind_pa, sppOnlyInPa, sppOnlyOutPa)
 
@@ -1103,55 +1103,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "WoNS_sppOnlyInPa_new_species",
                        "WoNS_sppOnlyInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_WoNS_sppOnlyInPa.csv")
-
-rm(wons, df_final, df_list, result_df, result_list, pa)
-
-# WoNS species distributed only outside (not inside) PA first/last seen count
-wons <- ala %>%
-  dplyr::select("IMCRA", "YearRange", "species_guid", "wons_status", "capad_status")
-
-wons <- wons %>%
-  dplyr::filter(wons_status == "WoNS")
-
-# Removing duplicates
-setkey(wons,NULL)
-pa <- unique(wons)
-pa <- pa %>%
-  dplyr::filter(capad_status == "outside")
-
-pa$YearRange <- as.numeric(pa$YearRange)
-df_final <- pa[, .(.N), keyby = c("IMCRA", "YearRange")]
-
-
-df_list <- split(df_final, seq_len(nrow(df_final)))
-result_list <- lapply(df_list, function(a, x){
-  current_year_species <- x[IMCRA == a$IMCRA & YearRange == a$YearRange, "species_guid"]$species_guid
-  previous_year_species <- unique(x[IMCRA == a$IMCRA & YearRange < a$YearRange, "species_guid"]$species_guid)
-  new_species <- length(which(!(current_year_species %in% previous_year_species)))
-  later_year_species <-  unique(x[IMCRA == a$IMCRA & YearRange > a$YearRange, "species_guid"]$species_guid)
-  last_seen_species <- length(which(!(current_year_species %in% later_year_species)))
-  number_of_species <- length(unique(current_year_species))
-  return(c(
-    new_species = new_species, 
-    last_seen_species = last_seen_species))
-}, x = pa)
-
-result_df <- as.data.frame(do.call(rbind, result_list))
-df_final <- cbind(df_final, result_df)
-
-# convert date range back to a factor
-df_final$YearRange <- factor(
-  df_final$YearRange,
-  levels = seq_len(9),
-  labels = levels(ala$YearRange))
-
-df_final <- df_final %>%
-  dplyr::select(IMCRA, YearRange, new_species, last_seen_species)
-colnames(df_final)<- c("IMCRA", "YearRange", "WoNS_sppOnlyOutPa_new_species",
-                       "WoNS_sppOnlyOutPa_last_seen_species")
-
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_WoNS_sppOnlyOutPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_WoNS_sppOnlyInPa.csv")
 
 rm(wons, df_final, df_list, result_df, result_list, pa)
 
@@ -1175,8 +1127,10 @@ sppByIMCRA <- unique(sppByIMCRA)
 
 sppByIMCRA1 <- setDT(sppByIMCRA)[, .(sppByIMCRA_epbc = .N),
                                keyby = c("IMCRA", "YearRange", "epbc_status")]
+sppByIMCRA1 <- sppByIMCRA1 %>% 
+  dplyr::select(IMCRA, YearRange, sppByIMCRA_epbc)
 
-fwrite(sppByIMCRA1, "SumTable/sppByIMCRA_epbc.csv")
+fwrite(sppByIMCRA1, "cache/sumTable/imcra/sppByIMCRA_epbc.csv")
 
 rm(sppByIMCRA, sppByIMCRA1)
 
@@ -1223,7 +1177,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "epbc_new_species",
                        "epbc_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_epbc.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_epbc.csv")
 
 rm(df_final, df_list, result_df, result_list, epbc)
 
@@ -1248,7 +1202,7 @@ sppInPa <- sppInPa %>%
 
 colnames(sppInPa)[3] <- c("sppInPa_epbc")
 
-fwrite(sppInPa, "SumTable/sppInPa_epbc.csv")
+fwrite(sppInPa, "cache/sumTable/imcra/sppInPa_epbc.csv")
 
 rm(epbc, pa, sppInPa)
 
@@ -1297,7 +1251,7 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "epbc_sppInPa_new_species",
                        "epbc_sppInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_epbc_sppInPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_epbc_sppInPa.csv")
 
 rm(epbc, df_final, df_list, result_df, result_list, pa)
 
@@ -1328,8 +1282,8 @@ sppOnlyOutPa <- sppOnlyOutPa %>%
   dplyr::select(IMCRA, YearRange, count)
 colnames(sppOnlyOutPa)[3] <- "epbc_sppOnlyOutPa"
 
-fwrite(sppOnlyInPa, "SumTable/epbc_sppOnlyInPa.csv")
-fwrite(sppOnlyOutPa, "SumTable/epbc_sppOnlyOutPa.csv")
+fwrite(sppOnlyInPa, "cache/sumTable/imcra/epbc_sppOnlyInPa.csv")
+fwrite(sppOnlyOutPa, "cache/sumTable/imcra/epbc_sppOnlyOutPa.csv")
 
 rm(epbc, Ind_pa, sppOnlyInPa, sppOnlyOutPa)
 
@@ -1377,11 +1331,12 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "epbc_sppOnlyInPa_new_species",
                        "epbc_sppOnlyInPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_epbc_sppOnlyInPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_epbc_sppOnlyInPa.csv")
 
 rm(epbc, df_final, df_list, result_df, result_list, pa)
 
-# epbc species distributed only outside (not inside) PA first/last seen count
+
+# epbc species distributed only outside (not inside) indigenous PA first/last seen count
 epbc <- ala %>%
   dplyr::select("IMCRA", "YearRange", "species_guid", "epbc_status", "capad_status")
 
@@ -1425,17 +1380,14 @@ df_final <- df_final %>%
 colnames(df_final)<- c("IMCRA", "YearRange", "epbc_sppOnlyOutPa_new_species",
                        "epbc_sppOnlyOutPa_last_seen_species")
 
-fwrite(df_final, "SumTable/SpeciesFirst&LastObserved_epbc_sppOnlyOutPa.csv")
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_epbc_sppOnlyOutPa.csv")
 
 rm(epbc, df_final, df_list, result_df, result_list, pa)
 
 
 ############################################
 # Merging datafiles
-list <- list.files(path = "SumTable/Marine", pattern = ".csv", full.names = TRUE)
-
-csv <- lapply(list, fread)
-View(csv)
+list <- list.files(path = "cache/sumTable/imcra/", pattern = ".csv", full.names = TRUE)
 
 df1 <- fread(list[[1]])
 df2 <- fread(list[[2]])
@@ -1467,17 +1419,9 @@ df27 <- fread(list[[27]])
 df28 <- fread(list[[28]])
 df29 <- fread(list[[29]])
 df30 <- fread(list[[30]])
-df30 <- df30 %>%
-  dplyr::select(IMCRA, YearRange, sppByIMCRA_epbc)
 df31 <- fread(list[[31]])
-df31 <- df31 %>%
-  dplyr::select(IMCRA, YearRange, sppByIMCRA_introduced)
 df32 <- fread(list[[32]])
-df32 <- df32 %>%
-  dplyr::select(IMCRA, YearRange, sppByIMCRA_invasive)
 df33 <- fread(list[[33]])
-df33 <- df33 %>%
-  dplyr::select(IMCRA, YearRange, sppByIMCRA_wons)
 df34 <- fread(list[[34]])
 df35 <- fread(list[[35]])
 df36 <- fread(list[[36]])
@@ -1486,7 +1430,6 @@ df38 <- fread(list[[38]])
 df39 <- fread(list[[39]])
 df40 <- fread(list[[40]])
 df41 <- fread(list[[41]])
-df42 <- fread(list[[42]])
 
 
 df <- df8 %>%
@@ -1569,9 +1512,6 @@ df <- df %>%
   dplyr::left_join(df40, by = c("IMCRA", "YearRange"))
 df <- df %>%
   dplyr::left_join(df41, by = c("IMCRA", "YearRange"))
-df <- df %>%
-  dplyr::left_join(df42, by = c("IMCRA", "YearRange"))
 
-
-write.csv(df, "SumTable/FullMerged_marine.csv")
+write.csv(df, "cache/sumTable/fullMerged_imcra.csv")
 
