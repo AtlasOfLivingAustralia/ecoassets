@@ -1936,7 +1936,7 @@ fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_WoNS_sppOnlyInPa
 rm(wons, df_final, df_list, result_df, result_list, pa)
 
 
-# WoNS species distributed only outside (not inside) indigenous PA first/last seen count
+# WoNS species distributed only outside (not inside) PA first/last seen count
 wons <- ala %>%
   dplyr::select("IBRA", "YearRange", "species_guid", "wons_status", "capad_status")
 

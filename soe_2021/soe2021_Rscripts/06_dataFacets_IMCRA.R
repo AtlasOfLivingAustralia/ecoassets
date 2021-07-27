@@ -1,7 +1,7 @@
 options(java.parameters = "-Xmx6g")
 
-lIMCRAry(data.table)
-lIMCRAry(dplyr)
+library(data.table)
+library(dplyr)
 
 # Merging data
 input_folder <- "cache/merged/marine/" # folder that contains all the csvs
@@ -1107,6 +1107,53 @@ fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_WoNS_sppOnlyInP
 
 rm(wons, df_final, df_list, result_df, result_list, pa)
 
+# WoNS species distributed only outside (not inside) PA first/last seen count
+wons <- ala %>%
+  dplyr::select("IMCRA", "YearRange", "species_guid", "wons_status", "capad_status")
+
+wons <- wons %>%
+  dplyr::filter(wons_status == "WoNS")
+
+# Removing duplicates
+setkey(wons,NULL)
+pa <- unique(wons)
+pa <- pa %>%
+  dplyr::filter(capad_status == "outside")
+
+pa$YearRange <- as.numeric(pa$YearRange)
+df_final <- pa[, .(.N), keyby = c("IMCRA", "YearRange")]
+
+df_list <- split(df_final, seq_len(nrow(df_final)))
+result_list <- lapply(df_list, function(a, x){
+  current_year_species <- x[IMCRA == a$IMCRA & YearRange == a$YearRange, "species_guid"]$species_guid
+  previous_year_species <- unique(x[IMCRA == a$IMCRA & YearRange < a$YearRange, "species_guid"]$species_guid)
+  new_species <- length(which(!(current_year_species %in% previous_year_species)))
+  later_year_species <-  unique(x[IMCRA == a$IMCRA & YearRange > a$YearRange, "species_guid"]$species_guid)
+  last_seen_species <- length(which(!(current_year_species %in% later_year_species)))
+  number_of_species <- length(unique(current_year_species))
+  return(c(
+    new_species = new_species, 
+    last_seen_species = last_seen_species))
+}, x = pa)
+
+result_df <- as.data.frame(do.call(rbind, result_list))
+df_final <- cbind(df_final, result_df)
+
+# convert date range back to a factor
+df_final$YearRange <- factor(
+  df_final$YearRange,
+  levels = seq_len(9),
+  labels = levels(ala$YearRange))
+
+df_final <- df_final %>%
+  dplyr::select(IMCRA, YearRange, new_species, last_seen_species)
+colnames(df_final)<- c("IMCRA", "YearRange", "WoNS_sppOnlyOutPa_new_species",
+                       "WoNS_sppOnlyOutPa_last_seen_species")
+
+fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_WoNS_sppOnlyOutPa.csv")
+
+rm(wons, df_final, df_list, result_df, result_list, pa)
+
 
 ##############################################################
 ala <- ala %>%
@@ -1514,4 +1561,3 @@ df <- df %>%
   dplyr::left_join(df41, by = c("IMCRA", "YearRange"))
 
 write.csv(df, "cache/sumTable/fullMerged_imcra.csv")
-
