@@ -1121,6 +1121,7 @@ pa <- pa %>%
   dplyr::filter(capad_status == "outside")
 
 pa$YearRange <- as.numeric(pa$YearRange)
+pa <- setDT(pa)
 df_final <- pa[, .(.N), keyby = c("IMCRA", "YearRange")]
 
 df_list <- split(df_final, seq_len(nrow(df_final)))
@@ -1436,6 +1437,8 @@ rm(epbc, df_final, df_list, result_df, result_list, pa)
 # Merging datafiles
 list <- list.files(path = "cache/sumTable/imcra/", pattern = ".csv", full.names = TRUE)
 
+# df <- rbindlist(list, use.names = TRUE)
+
 df1 <- fread(list[[1]])
 df2 <- fread(list[[2]])
 df3 <- fread(list[[3]])
@@ -1477,6 +1480,7 @@ df38 <- fread(list[[38]])
 df39 <- fread(list[[39]])
 df40 <- fread(list[[40]])
 df41 <- fread(list[[41]])
+df42 <- fread(list[[42]])
 
 
 df <- df8 %>%
@@ -1559,5 +1563,7 @@ df <- df %>%
   dplyr::left_join(df40, by = c("IMCRA", "YearRange"))
 df <- df %>%
   dplyr::left_join(df41, by = c("IMCRA", "YearRange"))
+df <- df %>%
+  dplyr::left_join(df42, by = c("IMCRA", "YearRange"))
 
 write.csv(df, "cache/sumTable/fullMerged_imcra.csv")
