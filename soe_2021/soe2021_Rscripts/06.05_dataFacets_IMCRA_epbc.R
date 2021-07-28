@@ -144,8 +144,7 @@ fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_epbc_sppInPa.cs
 
 rm(epbc, df_final, df_list, result_df, result_list, pa)
 
-# epbc species which are either inside (not outside) or outside 
-# (not inside) PAs
+# epbc species which are either inside (not outside) or outside (not inside) PAs
 epbc <- ala %>%
   dplyr::select("IMCRA", "YearRange", "species_guid", "epbc_status", 
                 "capad_status")
@@ -153,20 +152,26 @@ epbc <- ala %>%
 epbc <- epbc %>%
   dplyr::filter(epbc_status == "epbc")
 
+pa <- epbc %>%
+  dplyr::select(species_guid, IMCRA, YearRange, capad_status)
+
 # Removing duplicates
-setkey(epbc,NULL)
-Ind_pa <- unique(epbc)
+setkey(pa,NULL)
+pa <- unique(pa)
 
-Ind_pa <- setDT(Ind_pa)[, .(count = .N), keyby = c("IMCRA", "YearRange", "capad_status")]
+pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IMCRA", "YearRange")]
 
-sppOnlyInPa <- Ind_pa %>%
-  dplyr::filter(capad_status == "inside")
+pa2 <- pa1 %>% 
+  left_join(pa, by = c("species_guid", "IMCRA", "YearRange"))
+
+sppOnlyInPa <- pa2 %>% 
+  filter(count == 1 & capad_status == "inside")
 sppOnlyInPa <- sppOnlyInPa %>%
   dplyr::select(IMCRA, YearRange, count)
 colnames(sppOnlyInPa)[3] <- "epbc_sppOnlyInPa"
 
-sppOnlyOutPa <- Ind_pa %>%
-  dplyr::filter(capad_status == "outside")
+sppOnlyOutPa <- pa2 %>% 
+  filter(count == 1 & capad_status == "outside")
 sppOnlyOutPa <- sppOnlyOutPa %>%
   dplyr::select(IMCRA, YearRange, count)
 colnames(sppOnlyOutPa)[3] <- "epbc_sppOnlyOutPa"
@@ -174,7 +179,7 @@ colnames(sppOnlyOutPa)[3] <- "epbc_sppOnlyOutPa"
 fwrite(sppOnlyInPa, "cache/sumTable/imcra/epbc_sppOnlyInPa.csv")
 fwrite(sppOnlyOutPa, "cache/sumTable/imcra/epbc_sppOnlyOutPa.csv")
 
-rm(epbc, Ind_pa, sppOnlyInPa, sppOnlyOutPa)
+rm(epbc, sppOnlyInPa, sppOnlyOutPa)
 
 # epbc species distributed only inside (not outside) PA first/last seen count
 epbc <- ala %>%
@@ -183,11 +188,20 @@ epbc <- ala %>%
 epbc <- epbc %>%
   dplyr::filter(epbc_status == "epbc")
 
+pa <- epbc %>%
+  dplyr::select(species_guid, IMCRA, YearRange, capad_status)
+
 # Removing duplicates
-setkey(epbc,NULL)
-pa <- unique(epbc)
-pa <- pa %>%
-  dplyr::filter(capad_status == "inside")
+setkey(pa,NULL)
+pa <- unique(pa)
+
+pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IMCRA", "YearRange")]
+
+pa2 <- pa1 %>% 
+  left_join(pa, by = c("species_guid", "IMCRA", "YearRange"))
+
+pa <- pa2 %>% 
+  filter(count == 1 & capad_status == "inside")
 
 pa$YearRange <- as.numeric(pa$YearRange)
 df_final <- pa[, .(.N), keyby = c("IMCRA", "YearRange")]
@@ -222,25 +236,33 @@ colnames(df_final)<- c("IMCRA", "YearRange", "epbc_sppOnlyInPa_new_species",
 
 fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_epbc_sppOnlyInPa.csv")
 
-rm(epbc, df_final, df_list, result_df, result_list, pa)
+rm(epbc, df_final, df_list, result_df, result_list, pa, pa1, pa2)
 
-
-# epbc species distributed only outside (not inside) indigenous PA first/last seen count
+# epbc species distributed only outside (not inside) PA first/last seen count
 epbc <- ala %>%
   dplyr::select("IMCRA", "YearRange", "species_guid", "epbc_status", "capad_status")
 
 epbc <- epbc %>%
   dplyr::filter(epbc_status == "epbc")
 
+pa <- epbc %>%
+  dplyr::select(species_guid, IMCRA, YearRange, capad_status)
+
 # Removing duplicates
-setkey(epbc,NULL)
-pa <- unique(epbc)
-pa <- pa %>%
-  dplyr::filter(capad_status == "outside")
+setkey(pa,NULL)
+pa <- unique(pa)
+
+pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IMCRA", "YearRange")]
+
+pa2 <- pa1 %>% 
+  left_join(pa, by = c("species_guid", "IMCRA", "YearRange"))
+
+pa <- pa2 %>% 
+  filter(count == 1 & capad_status == "outside")
 
 pa$YearRange <- as.numeric(pa$YearRange)
+pa <- setDT(pa)
 df_final <- pa[, .(.N), keyby = c("IMCRA", "YearRange")]
-
 
 df_list <- split(df_final, seq_len(nrow(df_final)))
 result_list <- lapply(df_list, function(a, x){
@@ -271,4 +293,4 @@ colnames(df_final)<- c("IMCRA", "YearRange", "epbc_sppOnlyOutPa_new_species",
 
 fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_epbc_sppOnlyOutPa.csv")
 
-rm(epbc, df_final, df_list, result_df, result_list, pa)
+rm(epbc, df_final, df_list, result_df, result_list, pa, pa1, pa2)
