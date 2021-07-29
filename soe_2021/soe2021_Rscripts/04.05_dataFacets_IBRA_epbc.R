@@ -319,7 +319,6 @@ rm(epbc, pa, sppInPa)
 epbc <- ala %>%
   dplyr::select("IBRA", "YearRange", "species_guid", "epbc_status", 
                 "capad_status")
-
 epbc <- epbc %>%
   dplyr::filter(epbc_status == "epbc")
 
