@@ -151,9 +151,10 @@ fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_introduced_sppIn
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
-# Introduced species which are either inside (not outside) or outside (not inside) indigenous PAs
+# Introduced species which are either inside (not outside) or outside (not inside) PAs
 griis <- ala %>%
-  dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "indigenous_Status")
+  dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", 
+                "capad_status")
 
 griis <- griis %>%
   dplyr::mutate(griis_status = ifelse(griis_status == "NULL", "introduced", "other"))
@@ -161,32 +162,39 @@ griis <- griis %>%
 griis <- griis %>%
   dplyr::filter(griis_status == "introduced")
 
+
+pa <- griis %>%
+  dplyr::select(species_guid, IBRA, YearRange, capad_status)
+
 # Removing duplicates
-setkey(griis,NULL)
-Ind_pa <- unique(griis)
+setkey(pa,NULL)
+pa <- unique(pa)
 
-Ind_pa <- setDT(Ind_pa)[, .(count = .N), keyby = c("IBRA", "YearRange", "indigenous_Status")]
+pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IBRA", "YearRange")]
 
-sppOnlyInIndPa <- Ind_pa %>%
-  dplyr::filter(indigenous_Status == "inside")
-sppOnlyInIndPa <- sppOnlyInIndPa %>%
+pa2 <- pa1 %>% 
+  left_join(pa, by = c("species_guid", "IBRA", "YearRange"))
+
+sppOnlyInPa <- pa2 %>% 
+  filter(count == 1 & capad_status == "inside")
+sppOnlyInPa <- sppOnlyInPa %>%
   dplyr::select(IBRA, YearRange, count)
-colnames(sppOnlyInIndPa)[3] <- "introduced_sppOnlyInIndPa"
+colnames(sppOnlyInPa)[3] <- "introduced_sppOnlyInPa"
 
-sppOnlyOutIndPa <- Ind_pa %>%
-  dplyr::filter(indigenous_Status == "outside")
-sppOnlyOutIndPa <- sppOnlyOutIndPa %>%
+sppOnlyOutPa <- pa2 %>% 
+  filter(count == 1 & capad_status == "outside")
+sppOnlyOutPa <- sppOnlyOutPa %>%
   dplyr::select(IBRA, YearRange, count)
-colnames(sppOnlyOutIndPa)[3] <- "introduced_sppOnlyOutIndPa"
+colnames(sppOnlyOutPa)[3] <- "introduced_sppOnlyOutPa"
 
-fwrite(sppOnlyInIndPa, "cache/sumTable/ibra/introduced_sppOnlyInIndPa.csv")
-fwrite(sppOnlyOutIndPa, "cache/sumTable/ibra/introduced_sppOnlyOutIndPa.csv")
+fwrite(sppOnlyInPa, "cache/sumTable/IBRA/introduced_sppOnlyInPa.csv")
+fwrite(sppOnlyOutPa, "cache/sumTable/IBRA/introduced_sppOnlyOutPa.csv")
 
-rm(griis, Ind_pa, sppOnlyInIndPa, sppOnlyOutIndPa)
+rm(griis, sppOnlyInPa, sppOnlyOutPa, pa, pa1, pa2)
 
-# Introduced species distributed only inside (not outside) indigenous PA first/last seen count
+# Introduced species distributed only inside (not outside) PA first/last seen count
 griis <- ala %>%
-  dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "indigenous_Status")
+  dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "capad_status")
 
 griis <- griis %>%
   dplyr::mutate(griis_status = ifelse(griis_status == "NULL", "introduced", "other"))
@@ -194,11 +202,21 @@ griis <- griis %>%
 griis <- griis %>%
   dplyr::filter(griis_status == "introduced")
 
+pa <- griis %>%
+  dplyr::select(species_guid, IBRA, YearRange, capad_status)
+
 # Removing duplicates
-setkey(griis,NULL)
-pa <- unique(griis)
-pa <- pa %>%
-  dplyr::filter(indigenous_Status == "inside")
+setkey(pa,NULL)
+pa <- unique(pa)
+
+pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IBRA", "YearRange")]
+
+pa2 <- pa1 %>% 
+  left_join(pa, by = c("species_guid", "IBRA", "YearRange"))
+
+pa <- pa2 %>% 
+  filter(count == 1 & capad_status == "inside")
+
 
 pa$YearRange <- as.numeric(pa$YearRange)
 df_final <- pa[, .(.N), keyby = c("IBRA", "YearRange")]
@@ -228,16 +246,16 @@ df_final$YearRange <- factor(
 
 df_final <- df_final %>%
   dplyr::select(IBRA, YearRange, new_species, last_seen_species)
-colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppOnlyInIndPa_new_species",
-                       "introduced_sppOnlyInIndPa_last_seen_species")
+colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppOnlyInPa_new_species",
+                       "introduced_sppOnlyInPa_last_seen_species")
 
-fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_introduced_sppOnlyInIndPa.csv")
+fwrite(df_final, "cache/sumTable/IBRA/SpeciesFirst&LastObserved_introduced_sppOnlyInPa.csv")
 
-rm(griis, df_final, df_list, result_df, result_list, pa)
+rm(griis, df_final, df_list, result_df, result_list, pa, pa1, pa2)
 
-# Introduced species distributed only outside (not inside) indigenous PA first/last seen count
+# Introduced species distributed only outside (not inside) PA first/last seen count
 griis <- ala %>%
-  dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "indigenous_Status")
+  dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "capad_status")
 
 griis <- griis %>%
   dplyr::mutate(griis_status = ifelse(griis_status == "NULL", "introduced", "other"))
@@ -245,11 +263,21 @@ griis <- griis %>%
 griis <- griis %>%
   dplyr::filter(griis_status == "introduced")
 
+pa <- griis %>%
+  dplyr::select(species_guid, IBRA, YearRange, capad_status)
+
 # Removing duplicates
-setkey(griis,NULL)
-pa <- unique(griis)
-pa <- pa %>%
-  dplyr::filter(indigenous_Status == "outside")
+setkey(pa,NULL)
+pa <- unique(pa)
+
+pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IBRA", "YearRange")]
+
+pa2 <- pa1 %>% 
+  left_join(pa, by = c("species_guid", "IBRA", "YearRange"))
+
+pa <- pa2 %>% 
+  filter(count == 1 & capad_status == "outside")
+
 
 pa$YearRange <- as.numeric(pa$YearRange)
 df_final <- pa[, .(.N), keyby = c("IBRA", "YearRange")]
@@ -279,12 +307,12 @@ df_final$YearRange <- factor(
 
 df_final <- df_final %>%
   dplyr::select(IBRA, YearRange, new_species, last_seen_species)
-colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppOnlyOutIndPa_new_species",
-                       "introduced_sppOnlyOutIndPa_last_seen_species")
+colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppOnlyOutPa_new_species",
+                       "introduced_sppOnlyOutPa_last_seen_species")
 
-fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_introduced_sppOnlyOutIndPa.csv")
+fwrite(df_final, "cache/sumTable/IBRA/SpeciesFirst&LastObserved_introduced_sppOnlyOutPa.csv")
 
-rm(griis, df_final, df_list, result_df, result_list, pa)
+rm(griis, df_final, df_list, result_df, result_list, pa, pa1, pa2)
 
 
 # Number of introduced species inside PA
@@ -367,10 +395,10 @@ fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_introduced_sppIn
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
-# Introduced species which are either inside (not outside) or outside (not inside) PAs
+# Introduced species which are either inside (not outside) or outside (not inside) indigenous PAs
 griis <- ala %>%
   dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", 
-                "capad_status")
+                "indigenous_Status")
 
 griis <- griis %>%
   dplyr::mutate(griis_status = ifelse(griis_status == "NULL", "introduced", "other"))
@@ -378,32 +406,39 @@ griis <- griis %>%
 griis <- griis %>%
   dplyr::filter(griis_status == "introduced")
 
+
+pa <- griis %>%
+  dplyr::select(species_guid, IBRA, YearRange, indigenous_Status)
+
 # Removing duplicates
-setkey(griis,NULL)
-Ind_pa <- unique(griis)
+setkey(pa,NULL)
+pa <- unique(pa)
 
-Ind_pa <- setDT(Ind_pa)[, .(count = .N), keyby = c("IBRA", "YearRange", "capad_status")]
+pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IBRA", "YearRange")]
 
-sppOnlyInPa <- Ind_pa %>%
-  dplyr::filter(capad_status == "inside")
-sppOnlyInPa <- sppOnlyInPa %>%
+pa2 <- pa1 %>% 
+  left_join(pa, by = c("species_guid", "IBRA", "YearRange"))
+
+sppOnlyInIndPa <- pa2 %>% 
+  filter(count == 1 & indigenous_Status == "inside")
+sppOnlyInIndPa <- sppOnlyInIndPa %>%
   dplyr::select(IBRA, YearRange, count)
-colnames(sppOnlyInPa)[3] <- "introduced_sppOnlyInPa"
+colnames(sppOnlyInIndPa)[3] <- "introduced_sppOnlyInIndPa"
 
-sppOnlyOutPa <- Ind_pa %>%
-  dplyr::filter(capad_status == "outside")
-sppOnlyOutPa <- sppOnlyOutPa %>%
+sppOnlyOutIndPa <- pa2 %>% 
+  filter(count == 1 & indigenous_Status == "outside")
+sppOnlyOutIndPa <- sppOnlyOutIndPa %>%
   dplyr::select(IBRA, YearRange, count)
-colnames(sppOnlyOutPa)[3] <- "introduced_sppOnlyOutPa"
+colnames(sppOnlyOutIndPa)[3] <- "introduced_sppOnlyOutIndPa"
 
-fwrite(sppOnlyInPa, "cache/sumTable/ibra/introduced_sppOnlyInPa.csv")
-fwrite(sppOnlyOutPa, "cache/sumTable/ibra/introduced_sppOnlyOutPa.csv")
+fwrite(sppOnlyInPa, "cache/sumTable/IBRA/introduced_sppOnlyInIndPa.csv")
+fwrite(sppOnlyOutPa, "cache/sumTable/IBRA/introduced_sppOnlyOutIndPa.csv")
 
-rm(griis, Ind_pa, sppOnlyInPa, sppOnlyOutPa)
+rm(griis, sppOnlyInIndPa, sppOnlyOutIndPa, pa, pa1, pa2)
 
 # Introduced species distributed only inside (not outside) PA first/last seen count
 griis <- ala %>%
-  dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "capad_status")
+  dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "indigenous_Status")
 
 griis <- griis %>%
   dplyr::mutate(griis_status = ifelse(griis_status == "NULL", "introduced", "other"))
@@ -411,11 +446,21 @@ griis <- griis %>%
 griis <- griis %>%
   dplyr::filter(griis_status == "introduced")
 
+pa <- griis %>%
+  dplyr::select(species_guid, IBRA, YearRange, indigenous_Status)
+
 # Removing duplicates
-setkey(griis,NULL)
-pa <- unique(griis)
-pa <- pa %>%
-  dplyr::filter(capad_status == "inside")
+setkey(pa,NULL)
+pa <- unique(pa)
+
+pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IBRA", "YearRange")]
+
+pa2 <- pa1 %>% 
+  left_join(pa, by = c("species_guid", "IBRA", "YearRange"))
+
+pa <- pa2 %>% 
+  filter(count == 1 & indigenous_Status == "inside")
+
 
 pa$YearRange <- as.numeric(pa$YearRange)
 df_final <- pa[, .(.N), keyby = c("IBRA", "YearRange")]
@@ -445,16 +490,16 @@ df_final$YearRange <- factor(
 
 df_final <- df_final %>%
   dplyr::select(IBRA, YearRange, new_species, last_seen_species)
-colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppOnlyInPa_new_species",
-                       "introduced_sppOnlyInPa_last_seen_species")
+colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppOnlyInIndPa_new_species",
+                       "introduced_sppOnlyInIndPa_last_seen_species")
 
-fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_introduced_sppOnlyInPa.csv")
+fwrite(df_final, "cache/sumTable/IBRA/SpeciesFirst&LastObserved_introduced_sppOnlyInIndPa.csv")
 
-rm(griis, df_final, df_list, result_df, result_list, pa)
+rm(griis, df_final, df_list, result_df, result_list, pa, pa1, pa2)
 
-# Introduced species distributed only outside (not inside) indigenous PA first/last seen count
+# Introduced species distributed only outside (not inside) PA first/last seen count
 griis <- ala %>%
-  dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "capad_status")
+  dplyr::select("IBRA", "YearRange", "species_guid", "griis_status", "indigenous_Status")
 
 griis <- griis %>%
   dplyr::mutate(griis_status = ifelse(griis_status == "NULL", "introduced", "other"))
@@ -462,11 +507,21 @@ griis <- griis %>%
 griis <- griis %>%
   dplyr::filter(griis_status == "introduced")
 
+pa <- griis %>%
+  dplyr::select(species_guid, IBRA, YearRange, indigenous_Status)
+
 # Removing duplicates
-setkey(griis,NULL)
-pa <- unique(griis)
-pa <- pa %>%
-  dplyr::filter(capad_status == "outside")
+setkey(pa,NULL)
+pa <- unique(pa)
+
+pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IBRA", "YearRange")]
+
+pa2 <- pa1 %>% 
+  left_join(pa, by = c("species_guid", "IBRA", "YearRange"))
+
+pa <- pa2 %>% 
+  filter(count == 1 & indigenous_Status == "outside")
+
 
 pa$YearRange <- as.numeric(pa$YearRange)
 df_final <- pa[, .(.N), keyby = c("IBRA", "YearRange")]
@@ -496,9 +551,9 @@ df_final$YearRange <- factor(
 
 df_final <- df_final %>%
   dplyr::select(IBRA, YearRange, new_species, last_seen_species)
-colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppOnlyOutPa_new_species",
-                       "introduced_sppOnlyOutPa_last_seen_species")
+colnames(df_final)<- c("IBRA", "YearRange", "introduced_sppOnlyOutIndPa_new_species",
+                       "introduced_sppOnlyOutIndPa_last_seen_species")
 
-fwrite(df_final, "cache/sumTable/ibra/SpeciesFirst&LastObserved_introduced_sppOnlyOutPa.csv")
+fwrite(df_final, "cache/sumTable/IBRA/SpeciesFirst&LastObserved_introduced_sppOnlyOutIndPa.csv")
 
-rm(griis, df_final, df_list, result_df, result_list, pa)
+rm(griis, df_final, df_list, result_df, result_list, pa, pa1, pa2)
