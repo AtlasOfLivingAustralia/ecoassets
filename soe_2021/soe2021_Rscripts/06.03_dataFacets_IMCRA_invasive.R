@@ -153,23 +153,21 @@ fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_invasive_sppInP
 
 rm(griis, df_final, df_list, result_df, result_list, pa)
 
-# Invasive species which are either inside (not outside) or outside (not inside) PAs
+# invasive species which are either inside (not outside) or outside (not inside) PAs
 griis <- ala %>%
   dplyr::select("IMCRA", "YearRange", "species_guid", "griis_status", 
                 "capad_status")
-
 griis <- griis %>%
   dplyr::mutate(griis_status = ifelse(griis_status == "INVASIVE", "invasive", "other"))
+
 griis <- griis %>%
   dplyr::filter(griis_status == "invasive")
-
 
 pa <- griis %>%
   dplyr::select(species_guid, IMCRA, YearRange, capad_status)
 
 # Removing duplicates
-setkey(pa,NULL)
-pa <- unique(pa)
+pa <- setDT(pa)[, .(n = .N), keyby = c("species_guid", "IMCRA", "YearRange", "capad_status")]
 
 pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IMCRA", "YearRange")]
 
@@ -178,14 +176,12 @@ pa2 <- pa1 %>%
 
 sppOnlyInPa <- pa2 %>% 
   filter(count == 1 & capad_status == "inside")
-sppOnlyInPa <- sppOnlyInPa %>%
-  dplyr::select(IMCRA, YearRange, count)
+sppOnlyInPa <- setDT(sppOnlyInPa)[, .(count = .N), keyby = c("IMCRA", "YearRange")]
 colnames(sppOnlyInPa)[3] <- "invasive_sppOnlyInPa"
 
 sppOnlyOutPa <- pa2 %>% 
   filter(count == 1 & capad_status == "outside")
-sppOnlyOutPa <- sppOnlyOutPa %>%
-  dplyr::select(IMCRA, YearRange, count)
+sppOnlyOutPa <- setDT(sppOnlyOutPa)[, .(count = .N), keyby = c("IMCRA", "YearRange")]
 colnames(sppOnlyOutPa)[3] <- "invasive_sppOnlyOutPa"
 
 fwrite(sppOnlyInPa, "cache/sumTable/imcra/invasive_sppOnlyInPa.csv")
@@ -193,12 +189,14 @@ fwrite(sppOnlyOutPa, "cache/sumTable/imcra/invasive_sppOnlyOutPa.csv")
 
 rm(griis, sppOnlyInPa, sppOnlyOutPa, pa, pa1, pa2)
 
-# Invasive species distributed only inside (not outside) PA first/last seen count
+# invasive species distributed only inside (not outside) PA first/last seen count
 griis <- ala %>%
-  dplyr::select("IMCRA", "YearRange", "species_guid", "griis_status", "capad_status")
+  dplyr::select("IMCRA", "YearRange", "species_guid", "griis_status", 
+                "capad_status")
 
 griis <- griis %>%
   dplyr::mutate(griis_status = ifelse(griis_status == "INVASIVE", "invasive", "other"))
+
 griis <- griis %>%
   dplyr::filter(griis_status == "invasive")
 
@@ -206,8 +204,7 @@ pa <- griis %>%
   dplyr::select(species_guid, IMCRA, YearRange, capad_status)
 
 # Removing duplicates
-setkey(pa,NULL)
-pa <- unique(pa)
+pa <- setDT(pa)[, .(n = .N), keyby = c("species_guid", "IMCRA", "YearRange", "capad_status")]
 
 pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IMCRA", "YearRange")]
 
@@ -253,12 +250,14 @@ fwrite(df_final, "cache/sumTable/imcra/SpeciesFirst&LastObserved_invasive_sppOnl
 
 rm(griis, df_final, df_list, result_df, result_list, pa, pa1, pa2)
 
-# Invasive species distributed only outside (not inside) PA first/last seen count
+# invasive species distributed only outside (not inside) PA first/last seen count
 griis <- ala %>%
-  dplyr::select("IMCRA", "YearRange", "species_guid", "griis_status", "capad_status")
+  dplyr::select("IMCRA", "YearRange", "species_guid", "griis_status", 
+                "capad_status")
 
 griis <- griis %>%
   dplyr::mutate(griis_status = ifelse(griis_status == "INVASIVE", "invasive", "other"))
+
 griis <- griis %>%
   dplyr::filter(griis_status == "invasive")
 
@@ -266,8 +265,7 @@ pa <- griis %>%
   dplyr::select(species_guid, IMCRA, YearRange, capad_status)
 
 # Removing duplicates
-setkey(pa,NULL)
-pa <- unique(pa)
+pa <- setDT(pa)[, .(n = .N), keyby = c("species_guid", "IMCRA", "YearRange", "capad_status")]
 
 pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IMCRA", "YearRange")]
 

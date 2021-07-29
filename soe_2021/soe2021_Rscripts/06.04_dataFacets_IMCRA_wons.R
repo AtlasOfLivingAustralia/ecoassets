@@ -151,8 +151,7 @@ pa <- wons %>%
   dplyr::select(species_guid, IMCRA, YearRange, capad_status)
 
 # Removing duplicates
-setkey(pa,NULL)
-pa <- unique(pa)
+pa <- setDT(pa)[, .(n = .N), keyby = c("species_guid", "IMCRA", "YearRange", "capad_status")]
 
 pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IMCRA", "YearRange")]
 
@@ -161,24 +160,23 @@ pa2 <- pa1 %>%
 
 sppOnlyInPa <- pa2 %>% 
   filter(count == 1 & capad_status == "inside")
-sppOnlyInPa <- sppOnlyInPa %>%
-  dplyr::select(IMCRA, YearRange, count)
-colnames(sppOnlyInPa)[3] <- "WoNS_sppOnlyInPa"
+sppOnlyInPa <- setDT(sppOnlyInPa)[, .(count = .N), keyby = c("IMCRA", "YearRange")]
+colnames(sppOnlyInPa)[3] <- "wons_sppOnlyInPa"
 
 sppOnlyOutPa <- pa2 %>% 
   filter(count == 1 & capad_status == "outside")
-sppOnlyOutPa <- sppOnlyOutPa %>%
-  dplyr::select(IMCRA, YearRange, count)
+sppOnlyOutPa <- setDT(sppOnlyOutPa)[, .(count = .N), keyby = c("IMCRA", "YearRange")]
 colnames(sppOnlyOutPa)[3] <- "WoNS_sppOnlyOutPa"
 
 fwrite(sppOnlyInPa, "cache/sumTable/imcra/WoNS_sppOnlyInPa.csv")
 fwrite(sppOnlyOutPa, "cache/sumTable/imcra/WoNS_sppOnlyOutPa.csv")
 
-rm(wons, Ind_pa, sppOnlyInPa, sppOnlyOutPa)
+rm(wons, sppOnlyInPa, sppOnlyOutPa, pa, pa1, pa2)
 
 # WoNS species distributed only inside (not outside) PA first/last seen count
 wons <- ala %>%
-  dplyr::select("IMCRA", "YearRange", "species_guid", "wons_status", "capad_status")
+  dplyr::select("IMCRA", "YearRange", "species_guid", "wons_status", 
+                "capad_status")
 
 wons <- wons %>%
   dplyr::filter(wons_status == "WoNS")
@@ -187,8 +185,7 @@ pa <- wons %>%
   dplyr::select(species_guid, IMCRA, YearRange, capad_status)
 
 # Removing duplicates
-setkey(pa,NULL)
-pa <- unique(pa)
+pa <- setDT(pa)[, .(n = .N), keyby = c("species_guid", "IMCRA", "YearRange", "capad_status")]
 
 pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IMCRA", "YearRange")]
 
@@ -200,7 +197,6 @@ pa <- pa2 %>%
 
 pa$YearRange <- as.numeric(pa$YearRange)
 df_final <- pa[, .(.N), keyby = c("IMCRA", "YearRange")]
-
 
 df_list <- split(df_final, seq_len(nrow(df_final)))
 result_list <- lapply(df_list, function(a, x){
@@ -235,7 +231,8 @@ rm(wons, df_final, df_list, result_df, result_list, pa, pa1, pa2)
 
 # WoNS species distributed only outside (not inside) PA first/last seen count
 wons <- ala %>%
-  dplyr::select("IMCRA", "YearRange", "species_guid", "wons_status", "capad_status")
+  dplyr::select("IMCRA", "YearRange", "species_guid", "wons_status", 
+                "capad_status")
 
 wons <- wons %>%
   dplyr::filter(wons_status == "WoNS")
@@ -244,8 +241,7 @@ pa <- wons %>%
   dplyr::select(species_guid, IMCRA, YearRange, capad_status)
 
 # Removing duplicates
-setkey(pa,NULL)
-pa <- unique(pa)
+pa <- setDT(pa)[, .(n = .N), keyby = c("species_guid", "IMCRA", "YearRange", "capad_status")]
 
 pa1 <- setDT(pa)[, .(count = .N), keyby = c("species_guid", "IMCRA", "YearRange")]
 
