@@ -29,7 +29,6 @@ cs <- cs %>%
 cs <- cs %>%
   dplyr::filter(basisOfRecord == "CitizenScience")
 
-
 cs <- setDT(cs)[, .(CS_records = .N), keyby = c("IBRA", "YearRange", "basisOfRecord")]
 cs <- cs %>%
   dplyr::select(IBRA, YearRange, CS_records)
