@@ -1,6 +1,3 @@
-# Maximising memory
-options(java.parameters = "-Xmx6g")
-
 # Loading required libraries
 library(data.table)
 library(dplyr)
@@ -88,7 +85,6 @@ for (i in files){
 
 
 ###########################################
-rm(list = ls())
 # Intersecting with the CAPAD 2020 layer (marine)
 # Reading and validating shapefile
 capad <- st_read("cache/shapeFiles/capad/capadMarine.shp")

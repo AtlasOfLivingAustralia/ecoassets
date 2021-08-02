@@ -1,6 +1,3 @@
-# Maximising memory
-options(java.parameters = "-Xmx6g")
-
 # Loading required libraries
 library(data.table)
 library(tidyverse)
