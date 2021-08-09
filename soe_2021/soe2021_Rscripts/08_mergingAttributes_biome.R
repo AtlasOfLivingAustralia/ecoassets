@@ -54,7 +54,7 @@ colnames(epbc) <- c("species", "conservation_status", "date_effective")
 epbc <- epbc %>%
   dplyr::mutate(epbc = "Yes")
 
-rm(threatened_ala, threatened_df, threatened_list, wons_ala, wons_list, wons_original,
+rm(threatened_list, wons_ala, wons_list, wons_original,
    griis_list, griis_ala, griis_ala_original)
 ##########################################################################
 # Terrestrial
@@ -117,7 +117,7 @@ for(i in files) {
            WoNS = ifelse(is.na(WoNS), "Other", WoNS))
 
   ala1 <- ala1 %>%
-    dplyr::select(speciesID, year, basisOfRecord,
+    dplyr::select(speciesID, class, phylum, year, basisOfRecord,
                   B_NAME, CAPAD_Status, wons_status, griis_status,
                   conservation_status, NRM, indigenous_Status)
   
