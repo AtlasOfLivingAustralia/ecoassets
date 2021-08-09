@@ -1,4 +1,5 @@
 library(tidyverse)
+library(data.table)
 
 # Reading merged biome data
 biome <- fread("cache/sumTable/biome_merged.csv")
@@ -7,7 +8,7 @@ biome <- fread("cache/sumTable/biome_merged.csv")
 overall <- biome %>%
   dplyr::select(biome, YearRange, sppByBiome)
 overall <- overall %>%
-  group_by(biome, YearRange) %>%
+  group_by(biome) %>%
   mutate(csum=cumsum(sppByBiome),
          group = "Overall scenario")
 overall <- overall %>%
@@ -17,7 +18,7 @@ overall <- overall %>%
 epbc <- biome %>%
   dplyr::select(biome, YearRange, sppByBiome_epbc)
 epbc <- epbc %>%
-  group_by(biome, YearRange) %>%
+  group_by(biome) %>%
   mutate(csum = cumsum(sppByBiome_epbc),
          group = "EPBC listed species")
 epbc <- epbc %>%
@@ -27,7 +28,7 @@ epbc <- epbc %>%
 introduced <- biome %>%
   dplyr::select(biome, YearRange, sppByBiome_introduced)
 introduced <- introduced %>%
-  group_by(biome, YearRange) %>%
+  group_by(biome) %>%
   mutate(csum = cumsum(sppByBiome_introduced),
          group = "Introduced species")
 introduced <- introduced %>%
@@ -37,7 +38,7 @@ introduced <- introduced %>%
 invasive <- biome %>%
   dplyr::select(biome, YearRange, sppByBiome_invasive)
 invasive <- invasive %>%
-  group_by(biome, YearRange) %>%
+  group_by(biome) %>%
   mutate(csum = cumsum(sppByBiome_invasive),
          group = "Invasive species")
 invasive <- invasive %>%
@@ -47,7 +48,7 @@ invasive <- invasive %>%
 wons <- biome %>%
   dplyr::select(biome, YearRange, sppByBiome_wons)
 wons <- wons %>%
-  group_by(biome, YearRange) %>%
+  group_by(biome) %>%
   mutate(csum = cumsum(sppByBiome_wons),
          group = "Weeds of national significance")
 wons <- wons %>%

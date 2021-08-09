@@ -1,4 +1,5 @@
 library(tidyverse)
+library(data.table)
 
 # Reading data file
 landUseZone <- fread("cache/sumTable/landUseZone_merged.csv")
@@ -27,9 +28,9 @@ landUseZone <- landUseZone %>%
 overall <- landUseZone %>%
   dplyr::select(landUseZone, YearRange, sppBylandUseZone)
 overall <- overall %>%
-  group_by(landUseZone, YearRange) %>%
+  group_by(landUseZone) %>%
   mutate(csum=cumsum(sppBylandUseZone),
-         group = "Overall scenario")
+         group = "EPBC listed species")
 overall <- overall %>%
   dplyr::select(landUseZone, YearRange, csum, group)
 
@@ -37,7 +38,7 @@ overall <- overall %>%
 epbc <- landUseZone %>%
   dplyr::select(landUseZone, YearRange, sppBylandUseZone_epbc)
 epbc <- epbc %>%
-  group_by(landUseZone, YearRange) %>%
+  group_by(landUseZone) %>%
   mutate(csum = cumsum(sppBylandUseZone_epbc),
          group = "EPBC listed species")
 epbc <- epbc %>%
@@ -47,7 +48,7 @@ epbc <- epbc %>%
 introduced <- landUseZone %>%
   dplyr::select(landUseZone, YearRange, sppBylandUseZone_introduced)
 introduced <- introduced %>%
-  group_by(landUseZone, YearRange) %>%
+  group_by(landUseZone) %>%
   mutate(csum = cumsum(sppBylandUseZone_introduced),
          group = "Introduced species")
 introduced <- introduced %>%
@@ -57,7 +58,7 @@ introduced <- introduced %>%
 invasive <- landUseZone %>%
   dplyr::select(landUseZone, YearRange, sppBylandUseZone_invasive)
 invasive <- invasive %>%
-  group_by(landUseZone, YearRange) %>%
+  group_by(landUseZone) %>%
   mutate(csum = cumsum(sppBylandUseZone_invasive),
          group = "Invasive species")
 invasive <- invasive %>%
@@ -67,7 +68,7 @@ invasive <- invasive %>%
 wons <- landUseZone %>%
   dplyr::select(landUseZone, YearRange, sppBylandUseZone_wons)
 wons <- wons %>%
-  group_by(landUseZone, YearRange) %>%
+  group_by(landUseZone) %>%
   mutate(csum = cumsum(sppBylandUseZone_wons),
          group = "Weeds of national significance")
 wons <- wons %>%
