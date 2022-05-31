@@ -7,6 +7,7 @@ library(here)
 library(dplyr)
 library(arrow)
 library(galah)
+library(data.table)
 
 
 occ <- open_dataset(here("summaries_2022", 
@@ -51,25 +52,26 @@ add_epbc <- occ |>
 
 
 # add locationID to grouped_occ -------
-
-loc <- read_csv_arrow(here("summaries_2022", 
+loc_subset <- read_csv_arrow(here("summaries_2022", 
                            "data", 
                            "processed", 
-                           "distinct_loc.csv"))
-
-loc_subset <- loc |> 
+                           "distinct_loc.csv")) |> 
   select(locationID, decimalLatitude, decimalLongitude)
 
-# join locationId column and tidy
 
-grouped_occ <- add_epbc |> 
-  left_join(loc_subset, by = c("decimalLatitude", "decimalLongitude")) |> 
-  select(-c(decimalLatitude, decimalLongitude)) |> 
-  relocate(locationID, .after = year) |> 
-  relocate(epbcStatus, .before = count) |> 
-  collect()
+# join locationId column 
+interm_join <- add_epbc |> 
+  left_join(loc_subset, by = c("decimalLatitude", "decimalLongitude")) |>   
+  select(-c("decimalLatitude", "decimalLongitude")) |>   
+  collect() 
 
-write_csv_arrow(grouped_occ, here("summaries_2022", 
+# convert to datatable object to speed things up
+# use magrittr pipes instead because base pipes don't get along with . as placeholder
+grouped_occ <- interm_join %>%
+  setDT() %>%
+  filter(!duplicated(.))
+  
+fwrite(grouped_occ, here("summaries_2022", 
                                   "data", 
                                   "processed", 
                                   "grouped_occ.csv"))

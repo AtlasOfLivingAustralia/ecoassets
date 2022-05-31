@@ -41,14 +41,10 @@ distinct_loc <- ds |>
   mutate(
     forest2018Status = case_when(
       forest2018 %in% c("Non forest", "") ~ "non-forest",
-      TRUE ~ "forest"), 
+      TRUE ~ "forest"),
     forest2013Status = case_when(
       forest2013 %in% c("Non Forest", "") ~ "non-forest",
-      TRUE ~ "forest")) |> 
-  rename(ibraRegion = ibra,
-         imcraRegion = imcra) |> 
-  select(-c(forest2018, forest2013, capad_m, capad_t)) |> 
-  mutate(
+      TRUE ~ "forest"),
     capad_m_class = case_when(
       capad_m_class == "Indigenous Protected Area" ~ "IPA",
       capad_m_class == "" ~ "not protected",
@@ -60,8 +56,9 @@ distinct_loc <- ds |>
     capadStatus = case_when(
       capad_m_class == "IPA" | capad_t_class == "IPA" ~ "IPA",
       capad_m_class != "IPA" & capad_t_class != "IPA" & capad_m_class == "PA" | capad_t_class == "PA" ~ "PA",
-      TRUE ~ "not protected")) |> 
-  select(-c(capad_m_class, capad_t_class)) |> 
+      TRUE ~ "not protected")
+    ) |> 
+  select(-c(capad_m_class, capad_t_class, forest2018, forest2013)) |> 
   collect() |> 
   mutate(locationID = 1:n()) |> 
   relocate(locationID)

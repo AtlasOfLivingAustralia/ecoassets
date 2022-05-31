@@ -153,7 +153,7 @@ showtext_auto()
 all_plots <- map2(imcra_join, ibra_join, plotting_fun)
 
 # set the names of plots to save
-plotnames <- map(names(all_plots), ~paste0("summaries_2022/plots/ibra_imcra_", ., ".png")) 
+plotnames <- map(names(all_plots), ~paste0("summaries_2022/plots/choropleth/ibra_imcra_", ., ".png")) 
 
 # save plots
 walk2(plotnames, all_plots, ~ggsave(filename = .x, plot = .y, 
@@ -161,11 +161,11 @@ walk2(plotnames, all_plots, ~ggsave(filename = .x, plot = .y,
      
 # animate! ------
 
-list.files(path = "./summaries_2022/plots", pattern = "*.png", full.names = TRUE) |> 
+list.files(path = "./summaries_2022/plots/choropleth", pattern = "*.png", full.names = TRUE) |> 
   map(image_read) |>  # reads each path file
   image_join() |>  # joins image
   image_animate(delay = 100, optimize = TRUE) |>  # animates, can opt for number of loops
-  image_write("./summaries_2022/plots/ibra_imcra_observations.gif")
+  image_write("./summaries_2022/plots/choropleth/ibra_imcra_observations.gif")
 
 # save as tiff for high def
 # ggsave(here(

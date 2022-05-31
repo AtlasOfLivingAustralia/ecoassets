@@ -1,5 +1,5 @@
 
-# figure out why IMCRA has lots of white cells - NaN?
+# heatmaps of invasive and threatened species for IBRA and IMCRA regions
 
 library(readr)
 library(here)

@@ -2,7 +2,6 @@
 title: "Generating data summaries of the ALA"
 author: Shandiya Balasubramaniam
 format: html
-editor: visual
 ---
 
 ## Summaries of the Atlas of Living Australia
@@ -19,17 +18,17 @@ Three tables were derived from occurrences records in the ALA:
 SELECT DISTINCT decimallatitude as decimalLatitude, 
     decimallongitude as decimalLongitude,
     cl22 as stateTerritory,
-    cl11032 as capad_m, 
     cl111032 as capad_m_class,
-    cl11033 as capad_t,
     cl111033 as capad_t_class,
     cl10000 as forest2018, 
     cl10902 as forest2013, 
-    cl1048 as ibra, 
-    cl966 as imcra
+    cl1048 as ibraRegion, 
+    cl966 as imcraRegion
 FROM "ecoassets"."occ_parquet"
 WHERE year >= 1900 
 AND decimallatitude IS NOT NULL
+AND decimallongitude IS NOT NULL
+AND speciesId IS NOT NULL
 AND (cl1048 IS NOT NULL OR cl966 IS NOT NULL);
 ```
 
@@ -44,8 +43,10 @@ SELECT DISTINCT speciesid as speciesId,
     family,
     genus,
     species as speciesName
-FROM "ecoassets"."occ_parquet"
-WHERE year >= 1900 AND speciesId IS NOT NULL
+WHERE year >= 1900 
+AND decimallatitude IS NOT NULL
+AND decimallongitude IS NOT NULL
+AND speciesId IS NOT NULL
 AND (cl1048 IS NOT NULL OR cl966 IS NOT NULL);
 ```
 
@@ -62,6 +63,7 @@ SELECT speciesid as speciesId,
 FROM "ecoassets"."occ_parquet"
 WHERE year >= 1900 
 AND decimallatitude IS NOT NULL 
+AND decimallongitude IS NOT NULL
 AND speciesId IS NOT NULL 
 AND (cl1048 IS NOT NULL OR cl966 IS NOT NULL)
 GROUP BY speciesid, 

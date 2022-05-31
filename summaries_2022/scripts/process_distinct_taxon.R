@@ -1,5 +1,5 @@
 
-# append GRIIS and EPBC lists to distinct_taxon file generated in AWS Athena
+# append GRIIS list to distinct_taxon file generated in AWS Athena
 # distinct_taxon_griis: speciesId, kingdom, phylum, class, order, family, genus, 
 # speciesName, griisStatus {introduced, invasive, native}
 # Presence in the GRIIS list = introduced, having the Invasive flag = invasive,
@@ -54,10 +54,10 @@ griis_ala_tidy <- griis_ala_raw %>%
 # only includes species that match completely with ALA records, to species level etc.
 griis <- inner_join(griis_list, 
                     griis_ala_tidy, 
-                    by = c("scientificName" = "search_term"))
+                    by = c("scientificName" = "search_term")) 
 
 # join to distinct_taxon
-distinct_taxon_griis <- griis %>% 
+griis_taxon_joined <- griis %>% 
   select(scientific_name, isInvasive) %>% 
   right_join(distinct_taxon, by = c("scientific_name" = "speciesName")) %>% 
   mutate(griisStatus = case_when(
@@ -65,8 +65,17 @@ distinct_taxon_griis <- griis %>%
     isInvasive == "Null" ~ "Introduced",
     is.na(isInvasive) ~ "Native")) %>% 
   select(-isInvasive) %>% 
-  relocate(speciesName = scientific_name, .after = genus)
+  relocate(speciesName = scientific_name, .after = genus) 
 
+# get rid of duplicated rows, reclassify species with multiple invasive status
+# Amphibalanus improvisus and Gambusia holbrooki occur as both invasive and introduced
+# just keep the invasive status
+# clunky but it works
+distinct_taxon_griis <- griis_taxon_joined |> 
+  distinct() |> 
+  filter(!(speciesId == "urn:lsid:biodiversity.org.au:afd.taxon:e96c4568-a10f-4ea9-a741-a551b1f22bc1" & griisStatus == "Introduced")) |>
+  filter(!(speciesId == "urn:lsid:biodiversity.org.au:afd.taxon:4dae6f95-1cf3-43b1-841d-605813da860d" & griisStatus == "Introduced"))
+  
 fwrite(distinct_taxon_griis, 
        here("summaries_2022", 
             "data", 
