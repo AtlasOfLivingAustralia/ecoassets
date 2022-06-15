@@ -29,7 +29,8 @@ WHERE year >= 1900
 AND decimallatitude IS NOT NULL
 AND decimallongitude IS NOT NULL
 AND speciesId IS NOT NULL
-AND (cl1048 IS NOT NULL OR cl966 IS NOT NULL);
+AND (cl1048 IS NOT NULL OR cl966 IS NOT NULL)
+AND occurrencestatus = 'PRESENT';
 ```
 
 2.  `distinct_taxon`, comprising every species and associated values for higher taxonomic ranks
@@ -47,7 +48,8 @@ WHERE year >= 1900
 AND decimallatitude IS NOT NULL
 AND decimallongitude IS NOT NULL
 AND speciesId IS NOT NULL
-AND (cl1048 IS NOT NULL OR cl966 IS NOT NULL);
+AND (cl1048 IS NOT NULL OR cl966 IS NOT NULL)
+AND occurrencestatus = 'PRESENT';
 ```
 
 3.  `grouped_occ`, comprising counts of records grouped by unique combinations of species, spatial location, year, basis of record, and EPBC status
@@ -66,6 +68,7 @@ AND decimallatitude IS NOT NULL
 AND decimallongitude IS NOT NULL
 AND speciesId IS NOT NULL 
 AND (cl1048 IS NOT NULL OR cl966 IS NOT NULL)
+AND occurrencestatus = 'PRESENT'
 GROUP BY speciesid, 
     species,
     year, 
