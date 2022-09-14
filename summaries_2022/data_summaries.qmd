@@ -1,90 +1,16 @@
 ---
-title: "Generating data summaries of the ALA"
+title: "EcoAssets"
+subtitle: "Building data linkages for environmental reporting"   
 author: Shandiya Balasubramaniam
 format: html
 ---
 
-## Summaries of the Atlas of Living Australia
+EcoAssets brings together environmental data collected from three national research infrastructures - the Atlas of Living Australia (ALA), Integrated Marine Observing System (IMOS), and Terrestrial Ecosystem Research Infrastructure (TERN). By standardising the formats of these data resources and making them readily available, information can be streamlined into integrated data assets to support Australia's environmental reporting needs.
+
+This document outlines the workflow involved in creating these integrated data assets for assessing biodiversity and monitoring effort across Australia.
+
+# Data assets for Australian Biodiversity
 
 This document outlines the workflow involved in creating three data summaries of occurrence records in the ALA. This workflow consists of initial filtering and summarising using SQL in AWS Athena, followed by joining and further aggregating of records using R.
 
-## 01. Pre-processing in AWS
 
-Three tables were derived from occurrences records in the ALA:
-
-1.  `distinct_loc`, comprising every spatial location (i.e. unique longitude/latitude values) and associated values for state/territory and protected areas (CAPAD, IMCRA, IBRA, Forests of Australia)
-
-``` sql
-SELECT DISTINCT decimallatitude as decimalLatitude, 
-    decimallongitude as decimalLongitude,
-    cl22 as stateTerritory,
-    cl111032 as capad_m_class,
-    cl111033 as capad_t_class,
-    cl10000 as forest2018, 
-    cl10902 as forest2013, 
-    cl1048 as ibraRegion, 
-    cl966 as imcraRegion
-FROM "ecoassets"."occ_parquet"
-WHERE year >= 1900 
-AND decimallatitude IS NOT NULL
-AND decimallongitude IS NOT NULL
-AND speciesId IS NOT NULL
-AND (cl1048 IS NOT NULL OR cl966 IS NOT NULL)
-AND occurrencestatus = 'PRESENT';
-```
-
-2.  `distinct_taxon`, comprising every species and associated values for higher taxonomic ranks
-
-``` sql
-SELECT DISTINCT speciesid as speciesId,
-    kingdom,
-    phylum,
-    class,
-    _order as "order",
-    family,
-    genus,
-    species as speciesName
-WHERE year >= 1900 
-AND decimallatitude IS NOT NULL
-AND decimallongitude IS NOT NULL
-AND speciesId IS NOT NULL
-AND (cl1048 IS NOT NULL OR cl966 IS NOT NULL)
-AND occurrencestatus = 'PRESENT';
-```
-
-3.  `grouped_occ`, comprising counts of records grouped by unique combinations of species, spatial location, year, basis of record, and EPBC status
-
-``` sql
-SELECT speciesid as speciesId, 
-    species as speciesName,    
-    year, 
-    decimallatitude as decimalLatitude, 
-    decimallongitude as decimalLongitude, 
-    basisofrecord as basisOfRecord,
-    COUNT(*) as "count"
-FROM "ecoassets"."occ_parquet"
-WHERE year >= 1900 
-AND decimallatitude IS NOT NULL 
-AND decimallongitude IS NOT NULL
-AND speciesId IS NOT NULL 
-AND (cl1048 IS NOT NULL OR cl966 IS NOT NULL)
-AND occurrencestatus = 'PRESENT'
-GROUP BY speciesid, 
-    species,
-    year, 
-    decimalLatitude, 
-    decimalLongitude, 
-    basisOfRecord; 
-```
-
-In generating these initial summaries, records were excluded if:
-
--   they occurred before 1900
-
--   information on species or location was incomplete
-
--   they occurred outside of IMCRA or IBRA regions (as a proxy for Australian records only)
-
-## 02. Further processing in R
-
-Further processing of these tables was carried out in R. Details may be found in `scripts/process_distinct_loc.R`, `scripts/process_distinct_taxon.R`, and `scripts/process_grouped_occ.R`.
