@@ -6,5 +6,4 @@
 .Rproj.user/
 .Renviron
 data/
-data-raw/
-data-supplied/
+plots/
