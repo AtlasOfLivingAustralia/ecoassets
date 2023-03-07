@@ -1,5 +1,4 @@
-
-# visualisations of data facets
+# visualisations of biodiversity data facets: heatmaps, choropleths
 
 library(here)
 library(vroom)
