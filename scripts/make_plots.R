@@ -12,7 +12,7 @@ library(rmapshaper)
 library(magick)
 library(showtext)
 
-source(here("scripts", "functions.R"))
+source(here("scripts", "plotting_functions.R"))
 
 font_add_google("Lato", "lato")
 showtext_auto()
