@@ -54,7 +54,9 @@ tern_spatial <- tern_dates |>
   select(year,
          region = REG_NAME_7, 
          features_of_interest,
-         dataset = uri) |> 
+         datasetURI = uri,
+         datasetName = name) |> 
+  filter(!is.na(region)) |> 
   st_set_geometry(NULL)
   
 
@@ -64,15 +66,21 @@ mapping_tern <- read_csv("data/external/events_mapping.csv") |>
   mutate(keyword = tolower(keyword)) |> 
   unique()
 
+# manually change some keywords so they map more cleanly to the provided option
 tern_events <- tern_spatial |> 
   separate_longer_delim(features_of_interest, delim = "|") |> 
   mutate(features_of_interest = tolower(features_of_interest),
          features_of_interest = case_when(
            features_of_interest == "vegetationn fuel" ~ "vegetation fuel",
+           features_of_interest == "fauna population" ~ "animal population",
+           features_of_interest == "flux" ~ "climate",
+           features_of_interest == "soil surface" ~ "soil horizon",
+           features_of_interest == "vegetation decomposition" ~ "plant matter",
            TRUE ~ features_of_interest)) |> 
   left_join(mapping_tern, join_by(features_of_interest == keyword)) |> 
   select(NRI = source,
-         dataset, 
+         datasetName,
+         datasetURI, 
          keywords = features_of_interest, 
          year, 
          region,
@@ -82,10 +90,8 @@ tern_events <- tern_spatial |>
          facet2, 
          facet3)
 
-      
-# saveRDS(tern_events, "data/interim/tern_events.RDS")
+saveRDS(tern_events, "data/interim/tern_events.RDS")
 
- 
 
 ### IMOS ### ------
 # For IMOS, generate one row for each combination of a calendar year (either 
@@ -137,7 +143,7 @@ paths <- c(".//gex:northBoundLatitude//gco:Decimal",
            ".//mcc:MD_Identifier//gco:CharacterString",
            ".//mdb:metadataLinkage//cit:linkage//gco:CharacterString",
            ".//mri:citation//cit:title//gco:CharacterString",
-           ".//mri:abstract//gco:CharacterString",
+           #".//mri:abstract//gco:CharacterString",
            ".//mri:MD_Keywords/mri:keyword/gco:CharacterString")
 
 fields <- c("north", 
@@ -149,7 +155,7 @@ fields <- c("north",
             "identifier",
             "metadata",
             "citation",
-            "abstract",
+            #"abstract",
             "keywords")
 
 # easier to parse than an anonymous function within a nested purrr::map call
@@ -164,8 +170,8 @@ imos_data <- paths |>
   enframe() |> 
   pivot_wider(names_from = name, values_from = value) |>
   unnest(cols = everything(), keep_empty = TRUE) |>
-  unnest(cols = c(north, south, east, west, 
-                  start_period, end_period, metadata, citation),
+  unnest(cols = c(north, south, east, west, citation,
+                  start_period, end_period, metadata),
          keep_empty = TRUE) 
 
 # saveRDS(imos_data, "data/raw/imos_raw_eventdata.RDS")
@@ -190,7 +196,7 @@ imos_dates <- imos_data |>
   nest(data = c(start_year, inferred_end_year)) |> 
   mutate(year = map(data, ~ seq(.x$start_year, .x$inferred_end_year, by = 1))) |> 
   select(-c(data, rowname, end_year, start_period1, 
-            end_period1, inferred_dq_issue, abstract, citation)) |> 
+            end_period1, inferred_dq_issue)) |> 
   unnest(cols = year) |> 
   filter(year >= 2010)
 
@@ -230,7 +236,8 @@ imos_events <- imos_sf |>
   mutate(keywords = tolower(keywords)) |> 
   inner_join(mapping_imos, join_by(keywords == keyword)) |> 
   select(NRI = source,
-         dataset = metadata, 
+         datasetName = citation,
+         datasetURI = metadata, 
          keywords, 
          year, 
          region = MESO_NAME,
@@ -240,8 +247,7 @@ imos_events <- imos_sf |>
          facet2, 
          facet3)
   
-
-# saveRDS(imos_events, "data/interim/imos_events.RDS")
+saveRDS(imos_events, "data/interim/imos_events.RDS")
 
 
 ### ALA ### -------
@@ -432,23 +438,23 @@ joined_plants <- plant_events |>
   
 ala_events <- joined_animal |> 
   bind_rows(joined_plants) |> 
-  mutate(dataset = paste0("https://collections.ala.org.au/public/show/", dataResourceUid),
+  mutate(datasetURI = paste0("https://collections.ala.org.au/public/show/", dataResourceUid),
          samplingProtocol = replace_na(samplingProtocol, "Protocol unspecified"),
          keywords = paste0(samplingProtocol, ": ", eventsCount, " samples"),
          NRI = "ALA") |> 
   select(NRI,
-       dataset, 
-       keywords, 
-       year, 
-       region,
-       id, 
-       label, 
-       facet1,
-       facet2, 
-       facet3)
+         datasetName = dataResourceName,
+         datasetURI,
+         keywords,
+         year,
+         region,
+         id,
+         label,
+         facet1,
+         facet2,
+         facet3)
 
-
-# saveRDS(ala_events, "data/interim/ala_events.RDS")
+saveRDS(ala_events, "data/interim/ala_events.RDS")
 
 
 ### all events ### --------
