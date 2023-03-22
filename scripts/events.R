@@ -11,6 +11,23 @@ library(arrow)
 library(galah)
 
 
+# spatial layers for joins -----
+imcra_sf <- read_sf("data/external/imcra4/imcra4_meso.shp") |> 
+  st_transform(4326) |> 
+  select(region = MESO_NAME)
+
+ibra_sf <- read_sf("data/external/ibra7/ibra7_regions.shp") |> 
+  st_transform(4326) |> 
+  select(region = REG_NAME_7)
+
+states_sf <- read_sf("data/external/STE_2021_AUST_SHP_GDA2020/STE_2021_AUST_GDA2020.shp") |> 
+  st_transform(4326) |> 
+  filter(STE_NAME21 != "Outside Australia") |> 
+  select(STE_NAME21)
+
+sf_use_s2(FALSE)
+
+
 ### TERN ### -----
 # For TERN, generate one row for each combination of a year identified in the 
 # pipe-delimited visit_date column in the CSV file, the IBRA region indicated by
@@ -41,22 +58,22 @@ tern_dates <- tern_csv |>
 
 
 # TERN spatial------
-ibra_sf <- read_sf("data/external/ibra7/ibra7_regions.shp") |> 
-  st_transform(4326) |> 
-  select(REG_NAME_7)
-
-sf_use_s2(FALSE)
-
 tern_spatial <- tern_dates |> 
   st_as_sf(coords = c("long", "lat"),
-           crs = 4326) |> 
-  st_join(ibra_sf, join = st_intersects) |> 
+           crs = 4326,
+           remove = FALSE) |> 
+  st_join(ibra_sf, join = st_intersects) |>
+  # removes stations in NZ
+  filter(!is.na(REG_NAME_7)) |>
+  st_join(states_sf, join = st_intersects) |> 
   select(year,
-         region = REG_NAME_7, 
+         ibraRegion = REG_NAME_7, 
+         stateTerritory = STE_NAME21,
+         decimalLatitude = lat,
+         decimalLongitude = long,
          features_of_interest,
          datasetURI = uri,
-         datasetName = name) |> 
-  filter(!is.na(region)) |> 
+         datasetName = name) |>
   st_set_geometry(NULL)
   
 
@@ -78,17 +95,26 @@ tern_events <- tern_spatial |>
            features_of_interest == "vegetation decomposition" ~ "plant matter",
            TRUE ~ features_of_interest)) |> 
   left_join(mapping_tern, join_by(features_of_interest == keyword)) |> 
-  select(NRI = source,
+  rowwise() |> 
+  mutate(facet2 = case_when(!is.na(facet2) ~ facet2,
+                            is.na(facet2) ~ facet1),
+         facet3 = case_when(!is.na(facet3) ~ facet3,
+                            is.na(facet3) ~ facet2)) |> 
+  ungroup() |> 
+  select(nri = source,
          datasetName,
          datasetURI, 
-         keywords = features_of_interest, 
+         nriKeyword = features_of_interest, 
+         decimalLatitude,
+         decimalLongitude,
          year, 
-         region,
-         id, 
-         label, 
-         facet1,
-         facet2, 
-         facet3)
+         stateTerritory,
+         ibraRegion,
+         featureID = id, 
+         featureName = label, 
+         featureFacet1 = facet1,
+         featureFacet2 = facet2, 
+         featureFacet3 = facet3) 
 
 saveRDS(tern_events, "data/interim/tern_events.RDS")
 
@@ -201,60 +227,67 @@ imos_dates <- imos_data |>
   filter(year >= 2010)
 
 # IMOS spatial --------
-imcra_sf <- read_sf("data/external/imcra4/imcra4_meso.shp") |> 
-  st_transform(4326) |> 
-  select(MESO_NAME)
-
-sf_use_s2(FALSE)
-
 imos_sf <- imos_dates |> 
   filter(!is.na(north)) |> 
   mutate(across(north:west, as.numeric)) |> 
   rowwise() |> 
-  mutate(polygon = st_as_sfc(
-    st_bbox(c(xmin = west,
-              xmax = east,
-              ymin = south,
-              ymax = north),
-            crs = st_crs(4326)))) |> 
+  mutate(decimalLatitude = case_when((north == south) & (east == west) ~ north,
+                                     TRUE ~ NA),
+         decimalLongitude = case_when((north == south) & (east == west) ~ east,
+                                      TRUE ~ NA),
+         polygon = st_as_sfc(st_bbox(c(xmin = west,
+                                       xmax = east,
+                                       ymin = south,
+                                       ymax = north),
+                                     crs = st_crs(4326)))) |> 
   ungroup() |> 
-  select(-c(north, south, east, west, identifier)) |> 
-  st_as_sf(crs = 4326, sf_column_name = "polygon") |> 
+  st_as_sf(crs = 4326, sf_column_name = "polygon", remove = FALSE) |> 
   st_join(imcra_sf, join = st_intersects) |> 
+  st_join(states_sf, join = st_intersects) |> 
   st_drop_geometry()
 
 # IMOS keywords -------
-
 mapping_imos <- read_csv("data/external/events_mapping.csv") |> 
   filter(source == "IMOS") |> 
   mutate(keyword = tolower(keyword)) |> 
   unique()
 
 imos_events <- imos_sf |> 
-  filter(!is.na(MESO_NAME)) |> 
+  filter(!is.na(region)) |> 
   unnest(cols = keywords) |> 
   mutate(keywords = tolower(keywords)) |> 
   inner_join(mapping_imos, join_by(keywords == keyword)) |> 
-  select(NRI = source,
+  mutate(facet2 = case_when(!is.na(facet2) ~ facet2,
+                            is.na(facet2) ~ facet1),
+         facet3 = case_when(!is.na(facet3) ~ facet3,
+                            is.na(facet3) ~ facet2)) |> 
+  select(nri = source,
          datasetName = citation,
          datasetURI = metadata, 
-         keywords, 
+         nriKeyword = keywords, 
+         decimalLatitude,
+         decimalLongitude,
          year, 
-         region = MESO_NAME,
-         id, 
-         label, 
-         facet1,
-         facet2, 
-         facet3)
-  
+         stateTerritory = STE_NAME21,
+         imcraRegion = region,
+         featureID = id, 
+         featureName = label, 
+         featureFacet1 = facet1,
+         featureFacet2 = facet2, 
+         featureFacet3 = facet3)
+
 saveRDS(imos_events, "data/interim/imos_events.RDS")
 
 
 ### ALA ### -------
 
-# still need to download records for 2022 - only 1 million + records???
-
 ds <- open_dataset("data/galah") 
+
+# Find all occurrences associated with events from 2010 onwards and falling in 
+# an IBRA or IMCRA region and having a species identification or better
+# For each event, get the dataset id, samplingProtocol, coordinates, date, 
+# number of taxa included, the number of occurrences included and min-left and 
+# max-right - these are your event records
 
 event_records <- ds |> 
   filter(year >= 2010,
@@ -262,9 +295,13 @@ event_records <- ds |>
          #!is.na(samplingProtocol),
          !is.na(eventID),
          !is.na(dataResourceUid)) |>
-  mutate(samplingProtocol = tolower(samplingProtocol)) |> 
+  mutate(samplingProtocol = tolower(samplingProtocol), 
+         eventID = tolower(eventID)) |> 
   group_by(decimalLatitude,
            decimalLongitude,
+           cl22, 
+           cl1048,
+           cl966,
            year, 
            eventID,
            dataResourceUid,
@@ -275,49 +312,155 @@ event_records <- ds |>
             minLeft = min(lft),
             maxRight = max(rgt)) |> 
   ungroup() |> 
+  rename(ibraRegion = cl1048,
+         imcraRegion = cl966,
+         stateTerritory = cl22) |> 
   collect()
 
 
-# ALA spatial -----
-imcra_sf <- read_sf("data/external/imcra4/imcra4_meso.shp") |> 
-  st_transform(4326) |> 
-  select(region = MESO_NAME)
-  
-ibra_sf <- read_sf("data/external/ibra7/ibra7_regions.shp") |> 
-  st_transform(4326) |> 
-  select(region = REG_NAME_7)
+# Group these by unique dataset id and samplingProtocol and get the dataset id, 
+# sampling protocol, number of events, maximum number of species per event, maximum number 
+# of species per event, min-min-left and max-max-right - these are your protocol records
 
-regions <- bind_rows(imcra_sf, ibra_sf)
-
-sf_use_s2(FALSE)
-
-ala_spatial <- event_records |> 
-  st_as_sf(coords = c("decimalLongitude", "decimalLatitude"),
-           crs = 4326) |> 
-  st_join(regions, join = st_intersects) |> 
-  st_set_geometry(NULL)
-
-# summarise across events
-event_summaries <- ala_spatial |> 
+protocol_records <- event_records |> 
   group_by(dataResourceUid,
            dataResourceName, 
-           samplingProtocol, 
-           year, 
-           region) |>
+           samplingProtocol, eventID) |> 
   summarise(eventsCount = n(),
             maxSpeciesCount = max(speciesCount),
             maxOccCount = max(occCount),
             minMinLeft = min(minLeft),
             maxMaxRight = max(maxRight)) |> 
-  ungroup() |> 
-  mutate(left_right_check = if_else(minMinLeft <= maxMaxRight, "correct", "wrong"))
+  ungroup() 
 
-# check left values less than or equal to right values 
-# result should be 0
-nrow(filter(event_summaries, left_right_check == "wrong"))
+# check left values always less than or equal to right values (should be 0)
+protocol_records |> 
+  mutate(left_right_check = if_else(minMinLeft <= maxMaxRight, "correct", "wrong")) |> 
+  filter(left_right_check == "wrong")
+  
 
-# ALA keywords --------
-# get lft and rgt values for each kingdom
+# Throw away all protocol records in any of the following groups:
+# Number of events less than 10
+# Maximum number of species per event less than 5
+# Min-min-left and max-max-right span more than one kingdom AND 
+# the events include animal records
+
+kingdoms_lft_rgt <- readRDS("data/interim/kingdoms_lft_rgt.RDS")
+
+protocol_records_filtered <- protocol_records |> 
+  filter(eventsCount >= 10,
+         maxSpeciesCount >= 5) |> 
+  left_join(kingdoms_lft_rgt, 
+            join_by(between(minMinLeft, lft, rgt, bounds = "[]"))) |> 
+  select(-c(lft, rgt, rank)) |> 
+  rename(kingdom_left = search_term) |> 
+  left_join(kingdoms_lft_rgt, 
+            join_by(between(maxMaxRight, lft, rgt, bounds = "[]"))) |>
+  select(-c(lft, rgt, rank)) |> 
+  rename(kingdom_right = search_term) |> 
+  mutate(exclude = case_when(
+    (kingdom_left != kingdom_right) & (kingdom_left == "Animalia" | kingdom_right == "Animalia") ~ "exclude",
+    TRUE ~ "include")) |> 
+  filter(exclude == "include") |> 
+  select(-exclude)
+
+
+# Map each protocol record to the best fit from the biodiversity terms in the 
+# vocabulary. E.g. anything with just birds will be mapped to the 
+# "Biodiversity | Animals | Vertebrates | Birds" concept. You should be able to
+# do this with the left-right ranges for the ALA taxon concepts associated with 
+# each vocabulary concept. If the protocol includes multiple non-animal kingdoms, 
+# treat it as "Biodiversity | Plants" - this seems the best fit.
+
+mapping_ala <- read_csv("data/external/events_mapping.csv") |>
+  filter(str_detect(label, "Biodiversity")) |> 
+  select(-source, -keyword) |> 
+  unique()
+
+# NZOR ids (haptophytes, coccolithophores, diatoms, bacteria) don't produce
+# a match using search_taxa()
+ala_keywords <- search_taxa(mapping_ala$id)
+
+ala_lft_rgt <- mapping_ala |>
+  full_join(ala_keywords,
+            join_by("id" == "search_term")) |> 
+  select(id:facet3, lft, rgt) |> 
+  rowwise() |> 
+  mutate(levels = str_count(label, "\\|")) |> 
+  ungroup()
+
+# classify animal and non-animal separately
+protocol_records_non_animal <- protocol_records_filtered |> 
+  filter(kingdom_left == "Plantae" | kingdom_right == "Plantae") |> 
+  mutate(label = "Biodiversity | Plants") |> 
+  left_join(ala_lft_rgt, by = join_by(label))
+
+protocol_records_animal <- protocol_records_filtered |> 
+  filter(kingdom_left == "Animalia") |> 
+  left_join(ala_lft_rgt,
+            join_by(within(minMinLeft, maxMaxRight, lft, rgt))) |> 
+  group_by(dataResourceUid,
+           dataResourceName,
+           samplingProtocol,
+           eventID,
+           eventsCount,
+           maxSpeciesCount,
+           maxOccCount, 
+           minMinLeft,
+           maxMaxRight) |> 
+  slice_max(levels, n = 1) |> 
+  ungroup()
+  
+protocol_records_mapped <- bind_rows(protocol_records_animal, protocol_records_non_animal)
+
+# Throw away all event records that do not match any of the 
+# remaining protocol records 
+# Generate a row for each event with IBRA/IMCRA region, 
+# year and the vocabulary concept from the protocol record
+
+event_records_matched <- event_records |> 
+ inner_join(protocol_records_mapped, 
+            by = join_by(dataResourceUid, 
+                         dataResourceName, 
+                         samplingProtocol,
+                         eventID),
+            na_matches = "na",
+            multiple = "warning")
+
+ala_events <- event_records_matched |> 
+  st_as_sf(coords = c("decimalLongitude", "decimalLatitude"),
+           crs = 4326,
+           remove = FALSE) |> 
+  st_join(states_sf, join = st_intersects) |> 
+  st_set_geometry(NULL) |> 
+  mutate(nri = "ALA",
+         datasetURI = paste0("https://collections.ala.org.au/public/show/", dataResourceUid),
+         nriKeyword = paste0(samplingProtocol, ": ", eventsCount, " samples"),
+         facet2 = case_when(!is.na(facet2) ~ facet2,
+                            is.na(facet2) ~ facet1),
+         facet3 = case_when(!is.na(facet3) ~ facet3,
+                            is.na(facet3) ~ facet2),
+         stateTerritory = case_when(!is.na(stateTerritory) ~ stateTerritory,
+                                    is.na(stateTerritory) & !is.na(STE_NAME21) ~ STE_NAME21,
+                                    is.na(stateTerritory) & is.na(STE_NAME21) ~ NA)) |> 
+  select(nri,
+         datasetName = dataResourceName,
+         datasetURI, 
+         nriKeyword, 
+         decimalLatitude,
+         decimalLongitude,
+         year, 
+         stateTerritory,
+         ibraRegion,
+         featureID = id, 
+         featureName = label, 
+         featureFacet1 = facet1,
+         featureFacet2 = facet2, 
+         featureFacet3 = facet3) 
+
+saveRDS(ala_events, "data/interim/ala_events.RDS")  
+
+# ALA left and right values: OPTION 01 -----
 # needs to be re-run whenever names index changes
 #
 # library(galah)
@@ -343,7 +486,7 @@ nrow(filter(event_summaries, left_right_check == "wrong"))
 # 
 # kingdoms_lft_rgt <- map_dfr(queries, get_lft_rgt)
 # 
-### ALTERNATIVELY 
+# ALA left and right values: OPTION 02 -----
 # use {galah} version on a branch to get lft and rgt values
 # remotes::install_github("AtlasOfLivingAustralia/galah@lft-rgt")
 # library(galah)
@@ -357,111 +500,50 @@ nrow(filter(event_summaries, left_right_check == "wrong"))
 #                                       "rank" == "field"))
 # saveRDS(kingdoms_lft_rgt, "data/interim/kingdoms_lft_rgt.RDS")
 
-kingdoms_lft_rgt <- readRDS("data/interim/kingdoms_lft_rgt.RDS")
 
-events_filtered <- event_summaries |> 
-  select(-left_right_check) |> 
-  filter(eventsCount >= 10,
-         maxSpeciesCount >= 5) |> 
-  left_join(kingdoms_lft_rgt, 
-            join_by(between(minMinLeft, lft, rgt, bounds = "[]"))) |> 
-  select(-c(lft, rgt, rank)) |> 
-  rename(kingdom_left = search_term) |> 
-  left_join(kingdoms_lft_rgt, 
-            join_by(between(maxMaxRight, lft, rgt, bounds = "[]"))) |>
-  select(-c(lft, rgt, rank)) |> 
-  rename(kingdom_right = search_term) |> 
-  mutate(same = case_when(
-    kingdom_left == kingdom_right ~ "same",
-    TRUE ~ "different")) |> 
-  mutate(remove = case_when(
-    same == "different" & (kingdom_left == "Animalia" | kingdom_right == "Animalia") ~ "remove",
-    TRUE ~ "keep")) |> 
-  filter(remove == "keep") 
-
-
-# events where more than 1 kingdom is sampled, and neither kingdom is 
-# Animalia, get classified as plant events
-
-events_filtered |> count(kingdom_left, kingdom_right, same, remove) |> View()
-  
-mapping_ala <- read_csv("data/external/events_mapping.csv") |>
-  filter(str_detect(label, "Biodiversity")) |> 
-  select(-source, -keyword) |> 
-  unique()
-
-ala_keywords <- search_taxa(mapping_ala$id)
-
-# 4 rows with bie labels (haptophytes, coccolithophores, diatoms, bacteria) 
-# don't produce a match using search_taxa()
-ala_lft_rgt <- mapping_ala |>
-  full_join(ala_keywords,
-            join_by("id" == "search_term")) |> 
-  select(id:facet3, lft, rgt) |> 
-  rowwise() |> 
-  mutate(levels = str_count(label, "\\|")) |> 
-  ungroup()
-
-events_classified <- events_filtered |>
-  select(-remove) |> 
-  mutate(classification = case_when(
-    same == "different" ~ "Biodiversity | Plants",
-    same == "same" & kingdom_left == "Plantae" ~ "Biodiversity | Plants",
-    TRUE ~ "animal"))
-
-# do joins separately for plants and animals
-animal_events <- filter(events_classified, classification == "animal") 
-plant_events <- filter(events_classified, classification != "animal")
-
-joined_animal <- animal_events |> 
-  select(-(kingdom_left:classification)) |> 
-  left_join(ala_lft_rgt,
-            join_by(within(minMinLeft, maxMaxRight, lft, rgt))) |> 
-  group_by(dataResourceUid,
-           dataResourceName, 
-           samplingProtocol, 
-           year,
-           eventsCount, 
-           maxSpeciesCount, 
-           maxOccCount, 
-           minMinLeft, 
-           maxMaxRight) |>
-  slice_max(levels, n = 1) |> 
-  ungroup() |> 
-  select(-c(minMinLeft, maxMaxRight, lft, rgt, levels))
-  
-joined_plants <- plant_events |> 
-  left_join(ala_lft_rgt, join_by("classification" == "label")) |> 
-  select(-c(minMinLeft, maxMaxRight, kingdom_left, kingdom_right, 
-            same, lft, rgt, levels)) |> 
-  rename(label = classification)
-  
-ala_events <- joined_animal |> 
-  bind_rows(joined_plants) |> 
-  mutate(datasetURI = paste0("https://collections.ala.org.au/public/show/", dataResourceUid),
-         samplingProtocol = replace_na(samplingProtocol, "Protocol unspecified"),
-         keywords = paste0(samplingProtocol, ": ", eventsCount, " samples"),
-         NRI = "ALA") |> 
-  select(NRI,
-         datasetName = dataResourceName,
-         datasetURI,
-         keywords,
-         year,
-         region,
-         id,
-         label,
-         facet1,
-         facet2,
-         facet3)
-
-saveRDS(ala_events, "data/interim/ala_events.RDS")
-
-
-### all events ### --------
+### main asset ### --------
 tern_events <- readRDS("data/interim/tern_events.RDS")
 imos_events <- readRDS("data/interim/imos_events.RDS")
 ala_events <- readRDS("data/interim/ala_events.RDS")
 
-events <- bind_rows(tern_events, imos_events, ala_events)
+events <- tern_events |> 
+  bind_rows(imos_events, ala_events) |> 
+  relocate(imcraRegion, .after = ibraRegion)
+
 saveRDS(events, "data/processed/events.RDS")
 write_csv(events, "data/processed/events.csv")
+
+
+### derived assets: IBRA & IMCRA ### ---------
+ibra_events <- events |> 
+  filter(!is.na(ibraRegion)) |> 
+  group_by(year,
+           stateTerritory,
+           ibraRegion,
+           featureID,
+           featureName,
+           featureFacet1,
+           featureFacet2,
+           featureFacet3) |> 
+  summarise(recordCount = n())
+
+saveRDS(ibra_events, "data/processed/ibra_events.RDS")
+write_csv(ibra_events, "data/processed/ibra_events.csv")
+
+imcra_events <- events |> 
+  filter(!is.na(imcraRegion)) |> 
+  group_by(year,
+           stateTerritory,
+           imcraRegion,
+           featureID,
+           featureName,
+           featureFacet1,
+           featureFacet2,
+           featureFacet3) |> 
+  summarise(recordCount = n())
+
+saveRDS(imcra_events, "data/processed/imcra_events.RDS")
+write_csv(imcra_events, "data/processed/imcra_events.csv")
+
+
+
