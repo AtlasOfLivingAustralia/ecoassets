@@ -35,11 +35,12 @@ sf_use_s2(FALSE)
 # site lacks any visit_dates, use the commissioned_date and all subsequent years
 
 # data was sent as a csv from TERN
-tern_csv <- read_csv("data/external/TERN_Sites.csv")
+tern_csv <- read_csv("data/external/tern-20230323.csv")
 
 # TERN dates ------
 without_visit_date <- tern_csv |> 
   filter(is.na(visit_date)) |> 
+  filter(!is.na(date_commissioned)) |> 
   mutate(year_start = year(dmy(date_commissioned)),
          year_end = 2022) |> 
   rownames_to_column() |>  
@@ -48,11 +49,22 @@ without_visit_date <- tern_csv |>
   select(-data, -rowname) |> 
   unnest(cols = year)
 
+ongoing <- tern_csv |> 
+  filter(visit_date == "ongoing") |> 
+  mutate(year_start = year(dmy(date_commissioned)),
+         year_end = 2022) |> 
+  rownames_to_column() |>  
+  nest(data = c(year_start, year_end)) |> 
+  mutate(year = map(data, ~ seq(.x$year_start, .x$year_end, by = 1))) |> 
+  select(-data, -rowname) |> 
+  unnest(cols = year)
+  
 tern_dates <- tern_csv |> 
   filter(!is.na(visit_date)) |> 
+  filter(visit_date != "ongoing") |> 
   separate_longer_delim(visit_date, delim = "|") |> 
   mutate(year = year(dmy(visit_date))) |> 
-  bind_rows(without_visit_date) |> 
+  bind_rows(without_visit_date, ongoing) |> 
   select(-date_commissioned, -visit_date) |> 
   filter(year >= 2010)
 
@@ -64,16 +76,17 @@ tern_spatial <- tern_dates |>
            remove = FALSE) |> 
   st_join(ibra_sf, join = st_intersects) |>
   # removes stations in NZ
-  filter(!is.na(REG_NAME_7)) |>
+  filter(!is.na(region)) |>
   st_join(states_sf, join = st_intersects) |> 
+  mutate(datasetName = paste0(type_name, " ", name)) |> 
   select(year,
-         ibraRegion = REG_NAME_7, 
+         ibraRegion = region, 
          stateTerritory = STE_NAME21,
          decimalLatitude = lat,
          decimalLongitude = long,
          features_of_interest,
          datasetURI = uri,
-         datasetName = name) |>
+         datasetName) |>
   st_set_geometry(NULL)
   
 
@@ -85,14 +98,12 @@ mapping_tern <- read_csv("data/external/events_mapping.csv") |>
 
 # manually change some keywords so they map more cleanly to the provided option
 tern_events <- tern_spatial |> 
-  separate_longer_delim(features_of_interest, delim = "|") |> 
+  separate_longer_delim(features_of_interest, delim = " | ") |> 
   mutate(features_of_interest = tolower(features_of_interest),
          features_of_interest = case_when(
-           features_of_interest == "vegetationn fuel" ~ "vegetation fuel",
            features_of_interest == "fauna population" ~ "animal population",
            features_of_interest == "flux" ~ "climate",
            features_of_interest == "soil surface" ~ "soil horizon",
-           features_of_interest == "vegetation decomposition" ~ "plant matter",
            TRUE ~ features_of_interest)) |> 
   left_join(mapping_tern, join_by(features_of_interest == keyword)) |> 
   rowwise() |> 
@@ -544,6 +555,3 @@ imcra_events <- events |>
 
 saveRDS(imcra_events, "data/processed/imcra_events.RDS")
 write_csv(imcra_events, "data/processed/imcra_events.csv")
-
-
-
