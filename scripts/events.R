@@ -127,7 +127,7 @@ tern_events <- tern_spatial |>
          featureFacet2 = facet2, 
          featureFacet3 = facet3) 
 
-saveRDS(tern_events, "data/interim/tern_events.RDS")
+saveRDS(tern_events, "data/interim/events_tern.RDS")
 
 
 ### IMOS ### ------
@@ -287,7 +287,7 @@ imos_events <- imos_sf |>
          featureFacet2 = facet2, 
          featureFacet3 = facet3)
 
-saveRDS(imos_events, "data/interim/imos_events.RDS")
+saveRDS(imos_events, "data/interim/events_imos.RDS")
 
 
 ### ALA ### -------
@@ -469,7 +469,7 @@ ala_events <- event_records_matched |>
          featureFacet2 = facet2, 
          featureFacet3 = facet3) 
 
-saveRDS(ala_events, "data/interim/ala_events.RDS")  
+saveRDS(ala_events, "data/interim/events_ala.RDS")  
 
 # ALA left and right values: OPTION 01 -----
 # needs to be re-run whenever names index changes
@@ -513,15 +513,14 @@ saveRDS(ala_events, "data/interim/ala_events.RDS")
 
 
 ### main asset ### --------
-tern_events <- readRDS("data/interim/tern_events.RDS")
-imos_events <- readRDS("data/interim/imos_events.RDS")
-ala_events <- readRDS("data/interim/ala_events.RDS")
+tern_events <- readRDS("data/interim/events_tern.RDS")
+imos_events <- readRDS("data/interim/events_imos.RDS")
+ala_events <- readRDS("data/interim/events_ala.RDS")
 
 events <- tern_events |> 
   bind_rows(imos_events, ala_events) |> 
   relocate(imcraRegion, .after = ibraRegion)
 
-saveRDS(events, "data/processed/events.RDS")
 write_csv(events, "data/processed/events.csv")
 
 
@@ -538,8 +537,7 @@ ibra_events <- events |>
            featureFacet3) |> 
   summarise(recordCount = n())
 
-saveRDS(ibra_events, "data/processed/ibra_events.RDS")
-write_csv(ibra_events, "data/processed/ibra_events.csv")
+write_csv(ibra_events, "data/processed/events_ibra.csv")
 
 imcra_events <- events |> 
   filter(!is.na(imcraRegion)) |> 
@@ -553,5 +551,4 @@ imcra_events <- events |>
            featureFacet3) |> 
   summarise(recordCount = n())
 
-saveRDS(imcra_events, "data/processed/imcra_events.RDS")
-write_csv(imcra_events, "data/processed/imcra_events.csv")
+write_csv(imcra_events, "data/processed/events_imcra.csv")
