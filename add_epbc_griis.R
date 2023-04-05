@@ -1,10 +1,11 @@
 # separates downloaded records into 3 smaller relational tables & 
 # appends EPBC and GRIIS values 
 
+ds <- open_dataset("data/galah", format = "parquet")
+
 # 01. distinct loc -------
 # every unique lat/lon combination and associated spatial values 
 # (CAPAD, IBRA, IMCRA, state/territory, Forests of Australia)
-ds <- open_dataset("data/galah", format = "parquet")
 
 loc <- ds |> 
   select(decimalLatitude,
@@ -21,7 +22,7 @@ loc <- ds |>
   compute()
 
 # reclassify forest and capad fields
-# adding rowID makes relational joins easier
+# adding locationID makes relational joins easier
 
 distinct_forest2018 <- loc |> 
   distinct(forest2018) |> 
@@ -65,9 +66,26 @@ loc |>
   write_parquet(sink = "data/interim/distinct_loc")
 
 
-# 01. distinct loc -------
-# every unique lat/lon combination and associated spatial values 
-# (CAPAD, IBRA, IMCRA, state/territory, Forests of Australia)
+# 02. distinct taxon -------
+# every unique species and associated taxonomic hierarchy 
+
+taxa <- ds |> 
+  select(speciesID,
+         kingdom, 
+         phylum,
+         class,
+         order,
+         family,
+         genus,
+         speciesName = species,
+         cl1048,
+         cl966) |> 
+  filter(!is.na(cl966) | !is.na(cl1048)) |>
+  select(-c(cl966, cl1048)) |> 
+  distinct() |> 
+  compute()
+
+
 
 
 
