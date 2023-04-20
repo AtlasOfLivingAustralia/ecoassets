@@ -1,10 +1,12 @@
 # downloads records necessary for EcoAssets summary datasets and runs 
 # checks against the downloaded data 
 
-# 01. get data ------
-# NOTE: OR filters (|) not working in {galah}, so manually filter IBRA/IMCRA 
-# in downstream wrangling to restrict records to Australia only 
-# i.e. (cl1048 != "" | cl966 != "")
+# years of interest
+years <- as.numeric(c(1900:2022))
+
+# download data by year, for fields of interest
+# NOTE: OR filters (|) not working in {galah}, so filter IBRA/IMCRA downstream
+# to restrict records to Australia only i.e. (cl1048 != "" | cl966 != "")
 
 get_occ <- function(my_year) {
   
@@ -63,16 +65,17 @@ get_occ <- function(my_year) {
   
 }
 
-years <- as.numeric(c(1900:2022))
 map(years, get_occ)
 
-# 02. check downloaded data ------
+# check downloaded data has:
+# correct number of columns
+# years are within the expected range
+# speciesID, lat, and lon fields don't contain blanks
+
 ds <- open_dataset("data/galah", format = "parquet")
+
 duck_tbl <- ds |> to_duckdb()
 
-# i. correct number of columns
-# ii. years are within the expected range
-# iii. speciesID, lat, and lon fields don't contain blanks
 agent <- create_agent(tbl = duck_tbl,
                       tbl_name = "get_records",
                       label = "Check validity of get_records.R") |>
