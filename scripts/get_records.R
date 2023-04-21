@@ -1,12 +1,7 @@
 # downloads records necessary for EcoAssets summary datasets and runs 
 # checks against the downloaded data 
 
-# years of interest
 years <- as.numeric(c(1900:2022))
-
-# download data by year, for fields of interest
-# NOTE: OR filters (|) not working in {galah}, so filter IBRA/IMCRA downstream
-# to restrict records to Australia only i.e. (cl1048 != "" | cl966 != "")
 
 get_occ <- function(my_year) {
   
@@ -57,9 +52,12 @@ get_occ <- function(my_year) {
   
   x$select <- y
   
-  x |> 
-    atlas_occurrences() |> 
-    write_parquet(sink = paste0("data/galah/occ_", my_year))
+  x |>
+    atlas_occurrences() |>
+    filter(!is.na(cl966) | !is.na(cl1048)) |> 
+    write_dataset(path = "data/galah", 
+                  format = "parquet", 
+                  basename_template = paste0("{i}", "_occ_", my_year, ".parquet"))
   
   Sys.sleep(600)
   
