@@ -1,5 +1,6 @@
-# downloads records necessary for EcoAssets summary datasets and runs 
-# checks against the downloaded data 
+# downloads, checks, and saves records for downstream aggregation 
+# TODO: include a test that checks if all values of any column are NULL/NA
+# this should safeguard against layers being disabled
 
 years <- as.numeric(c(1900:2022))
 
@@ -45,7 +46,7 @@ get_occ <- function(each_year) {
 
   x <- galah_call() |>
     galah_apply_profile(ALA) |>
-    galah_filter(year == my_year,
+    galah_filter(year == each_year,
                  decimalLatitude != "",
                  decimalLongitude != "",
                  speciesID != "")
@@ -55,30 +56,13 @@ get_occ <- function(each_year) {
   x |>
     atlas_occurrences() |>
     filter(!is.na(cl966) | !is.na(cl1048)) |>
+    col_count_match(count = nrow(y)) |> 
+    col_vals_not_null(columns = vars(decimalLatitude, 
+                                     decimalLongitude, 
+                                     speciesID, 
+                                     year)) |> 
     write_parquet(sink = paste0("data/galah/occ_", each_year, ".parquet"))
-
-  # Sys.sleep(60)
 
 }
 
 walk(years, get_occ)
-
-# quick check of downloaded data
-ds <- open_dataset("data/galah", format = "parquet")
-cat(length(list.files("data/galah/")), 
-    "files have been downloaded. These data contain", 
-    ncol(ds), 
-    "columns and span the following years:",
-    min(collect((select(ds, year)))), 
-    "-",
-    max(collect((select(ds, year)))))
-
-# TODO: add {pointblank} tests to check data download
-# ds <- open_dataset("data/galah", format = "parquet")
-# con <- dbConnect(duckdb::duckdb())
-# duckdb_register_arrow(con, "ds", ds)
-# duck_ds <- tbl(con, "ds")
-# agent <-
-#   create_agent(tbl = duck_ds) |> 
-#   col_count_match(count = 33) |> 
-#   interrogate()
