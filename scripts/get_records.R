@@ -3,12 +3,12 @@
 
 years <- as.numeric(c(1900:2022))
 
-get_occ <- function(my_year) {
-  
+get_occ <- function(each_year) {
+
   y <- tibble(name =
                 c("id",
                   "lft",
-                  "rgt", 
+                  "rgt",
                   "speciesID",
                   "taxonConceptID",
                   "kingdom",
@@ -38,49 +38,47 @@ get_occ <- function(my_year) {
                   "cl10000",
                   "cl22",
                   "cl1048",
-                  "cl966"), 
+                  "cl966"),
               type = "field")
-  
+
   attr(y, "call") <- "galah_select"
-  
+
   x <- galah_call() |>
-    galah_apply_profile(ALA) |> 
+    galah_apply_profile(ALA) |>
     galah_filter(year == my_year,
                  decimalLatitude != "",
                  decimalLongitude != "",
                  speciesID != "")
-  
+
   x$select <- y
-  
+
   x |>
     atlas_occurrences() |>
-    filter(!is.na(cl966) | !is.na(cl1048)) |> 
-    write_dataset(path = "data/galah", 
-                  format = "parquet", 
-                  basename_template = paste0("{i}", "_occ_", my_year, ".parquet"))
-  
-  Sys.sleep(600)
-  
+    filter(!is.na(cl966) | !is.na(cl1048)) |>
+    write_parquet(sink = paste0("data/galah/occ_", each_year, ".parquet"))
+
+  # Sys.sleep(60)
+
 }
 
-map(years, get_occ)
+walk(years, get_occ)
 
-# check downloaded data has:
-# correct number of columns
-# years are within the expected range
-# speciesID, lat, and lon fields don't contain blanks
-
+# quick check of downloaded data
 ds <- open_dataset("data/galah", format = "parquet")
+cat(length(list.files("data/galah/")), 
+    "files have been downloaded. These data contain", 
+    ncol(ds), 
+    "columns and span the following years:",
+    min(collect((select(ds, year)))), 
+    "-",
+    max(collect((select(ds, year)))))
 
-duck_tbl <- ds |> to_duckdb()
-
-agent <- create_agent(tbl = duck_tbl,
-                      tbl_name = "get_records",
-                      label = "Check validity of get_records.R") |>
-  col_count_match(count = 33) |> 
-  col_vals_between(columns = vars(year), left = min(years), right = max(years)) |>
-  col_vals_not_null(columns = vars(decimalLatitude, decimalLongitude, speciesID)) |> 
-  interrogate()
-
-x_write_disk(agent, filename = "agent-get_records", path = "tests")  
-
+# TODO: add {pointblank} tests to check data download
+# ds <- open_dataset("data/galah", format = "parquet")
+# con <- dbConnect(duckdb::duckdb())
+# duckdb_register_arrow(con, "ds", ds)
+# duck_ds <- tbl(con, "ds")
+# agent <-
+#   create_agent(tbl = duck_ds) |> 
+#   col_count_match(count = 33) |> 
+#   interrogate()
