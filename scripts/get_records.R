@@ -1,4 +1,4 @@
-# downloads, checks, and saves records for downstream aggregation 
+# Downloads, checks, and saves records for downstream aggregation 
 # TODO: include a test that checks if all values of any column are NULL/NA
 # this should safeguard against layers being disabled
 
