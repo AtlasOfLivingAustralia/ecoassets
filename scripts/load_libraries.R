@@ -1,9 +1,8 @@
-# loads libraries necessary for running EcoAssets scripts
+# Loads libraries necessary for running EcoAssets 
 
 library(tidyverse)
 library(galah)
 library(arrow)
-library(duckdb)
 library(pointblank)
 library(ggnewscale)
 library(rmapshaper)
