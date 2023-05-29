@@ -178,7 +178,8 @@ ala_events <- event_records |>
          featureName = label, 
          featureFacet1 = facet1,
          featureFacet2 = facet2, 
-         featureFacet3 = facet3) 
+         featureFacet3 = facet3) |> 
+  distinct()
 
 saveRDS(ala_events, "data/interim/events_ala.RDS") 
 
@@ -310,7 +311,8 @@ tern_events <- tern_spatial |>
          featureName = label, 
          featureFacet1 = facet1,
          featureFacet2 = facet2, 
-         featureFacet3 = facet3) 
+         featureFacet3 = facet3) |> 
+  distinct()
 
 saveRDS(tern_events, here("data", "interim", "events_tern.RDS"))
 
@@ -475,7 +477,8 @@ imos_events <- imos_spatial |>
          featureName = label, 
          featureFacet1 = facet1,
          featureFacet2 = facet2, 
-         featureFacet3 = facet3)
+         featureFacet3 = facet3) |> 
+  distinct()
 
 saveRDS(imos_events, here("data", "interim", "events_imos.RDS"))
 
