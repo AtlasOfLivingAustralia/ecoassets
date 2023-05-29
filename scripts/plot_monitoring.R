@@ -78,3 +78,10 @@ plant_events_plot <- plot_sample_event_points(ibra_sf,
                                                imcra_sf, 
                                                events_plants,
                                               "#456300")
+
+ggsave(here("plots", "event_points_plants.png"),
+       plant_events_plot,
+       height = 10, 
+       width = 10, 
+       units = "in")
+
