@@ -11,5 +11,6 @@ library(showtext)
 library(sf)
 library(xml2)
 library(here)
+library(duckdb)
 
 galah_config(email = Sys.getenv("email"), verbose = TRUE)

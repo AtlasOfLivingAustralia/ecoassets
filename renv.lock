@@ -614,6 +614,19 @@
       ],
       "Hash": "54ed3ea01b11e81a86544faaecfef8e2"
     },
+    "duckdb": {
+      "Package": "duckdb",
+      "Version": "0.8.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "DBI",
+        "R",
+        "methods",
+        "utils"
+      ],
+      "Hash": "d22ebf42c6176a7863d44587e88a84d9"
+    },
     "e1071": {
       "Package": "e1071",
       "Version": "1.7-13",
