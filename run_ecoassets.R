@@ -10,8 +10,11 @@ source("scripts/get_records.R")
 source("scripts/assemble_monitoring.R")
 source("scripts/plot_monitoring.R")
 
-# TODO: 
 # 4. biodiversity datasets and plots
 source("scripts/create_relational_tables.R")
+
+# TODO
 source("scripts/facet_biodiversity.R")
+
+# TODO
 source("scripts/plot_biodiversity.R")
