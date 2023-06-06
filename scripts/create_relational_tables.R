@@ -101,6 +101,7 @@ griis_list_dh <- taxon_edited |>
 # create GRIIS list that matches names in ALA, reclassify, join
 search_taxa_griis <- search_taxa(griis_list_dh$scientificName)
 
+# remove duplicates and reclassify rows where the same species has > 1 GRIIS status
 griis_list <- search_taxa_griis |> 
   filter(match_type == "exactMatch",
          issues == "noIssue",
@@ -112,43 +113,32 @@ griis_list <- search_taxa_griis |>
   select(scientific_name, isInvasive) |> 
   mutate(griisStatus = case_when(
     isInvasive == "Invasive"~ "Invasive",
-    isInvasive == "Null" ~ "Introduced",
-    TRUE ~ "Native")) |> 
-  select(-isInvasive) 
-
-taxa_with_griis <- taxa |> 
-  left_join(griis_list, by = join_by(speciesName == scientific_name)) |>
+    isInvasive == "Null" ~ "Introduced")) |> 
+  select(-isInvasive) |> 
   distinct() |> 
+  group_by(scientific_name) |> 
+  mutate(count = n(),
+         griisStatus = case_when(
+           count > 1 & "Invasive" %in% (unique(griisStatus)) ~ "Invasive",
+           TRUE ~ griisStatus)) |> 
+    ungroup() |> 
+    select(-count) |> 
+    distinct() 
+    
+taxa |> 
+  left_join(griis_list, by = join_by(speciesName == scientific_name)) |> 
   collect() |> 
-  mutate(griisStatus = replace_na(griisStatus, "Native")) 
-
-# sometimes rows are duplicated, with the only difference being the griis status
-# for the same species
-# this filters out the less severe griis status in such instances
-# TODO: look at implementing this check before joining (see similar check below
-# in occurrences section)
-taxa_griis_counts <- taxa_with_griis |> 
-  count(speciesID) |> 
-  full_join(taxa_with_griis, by = join_by(speciesID))
-
-taxa_griis_counts |> 
-  group_by(speciesID) |> 
-  mutate(griisStatus = case_when(
-    `n` > 1 & "Invasive" %in% (unique(griisStatus)) ~ "Invasive",
-    `n` > 1 & "Introduced" %in% (unique(griisStatus)) ~ "Introduced",
-    TRUE ~ griisStatus)) |> 
-  select(-`n`) |> 
-  distinct() |>
-  col_vals_not_null(columns = vars(speciesID, griisStatus)) |> 
+  mutate(griisStatus = replace_na(griisStatus, "Native")) |> 
+  col_vals_not_null(columns = vars(speciesID, griisStatus, speciesName)) |> 
   write_parquet(sink = "data/interim/rel_distinct_taxa.parquet")
 
 
 # occurrences ------
 # grouped counts of speciesID, year, location, basisOfRecord, epbcStatus 
 
-dir.create("data/temp_loc")
-dir.create("data/temp_grp")
-dir.create("data/temp_epbc")
+dir.create("data/tmp_loc")
+dir.create("data/tmp_grp")
+dir.create("data/tmp_epbc")
 # because pointblank doesn't support arrow ds yet
 duck_con <- dbConnect(duckdb::duckdb())
 
@@ -170,10 +160,10 @@ ds |>
   left_join(locID, by = join_by(decimalLatitude, decimalLongitude)) |>
   select(-c(decimalLatitude, decimalLongitude)) |> 
   group_by(year) |> 
-  write_dataset(path = "data/temp_loc", format = "parquet")
+  write_dataset(path = "data/tmp_loc", format = "parquet")
   
 # group_by and summarise for each year, then combine as a ds
-pq_loc_files <- list.files("data/temp_loc", full.names = TRUE, recursive = TRUE)
+pq_loc_files <- list.files("data/tmp_loc", full.names = TRUE, recursive = TRUE)
 
 count_by_year <- function(fpath) {
   
@@ -187,7 +177,7 @@ count_by_year <- function(fpath) {
              basisOfRecord) |> 
     summarise(counts = n(), .groups = "drop") |>
     mutate(year = year_id) |> 
-    write_parquet(sink = paste0("data/temp_grp/year_", year_id, ".parquet"))
+    write_parquet(sink = paste0("data/tmp_grp/year_", year_id, ".parquet"))
     
 }
 
@@ -195,10 +185,10 @@ walk(pq_loc_files, count_by_year)
 
 ### checks -----
 # 1. number of rows in ungrouped ds == sum of counts in grouped ds 
-ds_loc <- open_dataset("data/temp_loc", format = "parquet")
+ds_loc <- open_dataset("data/tmp_loc", format = "parquet")
 duck_loc <- ds_loc |> to_duckdb()
 
-ds_grp <- open_dataset("data/temp_grp", format = "parquet")
+ds_grp <- open_dataset("data/tmp_grp", format = "parquet")
 sum_counts_grp <- ds_grp |> 
   pull(counts, as_vector = TRUE) |> 
   sum()
@@ -247,11 +237,11 @@ ds_grp |>
     is.na(epbcStatus) ~ "Not listed",
     TRUE ~ epbcStatus)) |> 
   select(-speciesName) |> 
-  write_dataset(path = "data/temp_epbc", format = "parquet")
+  write_dataset(path = "data/tmp_epbc", format = "parquet")
 
 ### checks ----
 # 1. number of rows in ungrouped ds == sum of counts in final grouped ds 
-ds_epbc <- open_dataset("data/temp_epbc", format = "parquet")
+ds_epbc <- open_dataset("data/tmp_epbc", format = "parquet")
 sum_counts_epbc <- ds_epbc |> 
   pull(counts, as_vector = TRUE) |> 
   sum()
@@ -265,10 +255,10 @@ duck_epbc <- ds_epbc |> to_duckdb()
 row_count_match(duck_epbc, count = nrow_grp)
 
 # write to disk and cleanup
-open_dataset("data/temp_epbc", format = "parquet") |> 
+open_dataset("data/tmp_epbc", format = "parquet") |> 
   write_parquet(sink = "data/interim/rel_occ_counts.parquet")
 
-unlink("data/temp_loc", recursive = TRUE)
-unlink("data/temp_grp", recursive = TRUE)
-unlink("data/temp_epbc", recursive = TRUE)
+unlink("data/tmp_loc", recursive = TRUE)
+unlink("data/tmp_grp", recursive = TRUE)
+unlink("data/tmp_epbc", recursive = TRUE)
 dbDisconnect(duck_con, shutdown=TRUE)
