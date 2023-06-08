@@ -490,7 +490,9 @@ saveRDS(imos_events, here("data", "interim", "events_imos.RDS"))
 
 ala_events |> 
   bind_rows(tern_events, imos_events) |> 
-  write_csv(here("data", "processed", "monitoring.csv"))
+  write_csv(here("data", 
+                 "aggregated_env_monitoring",
+                 "aggregated_env_monitoring.csv"))
 
 ala_events |> 
   bind_rows(tern_events) |> 
@@ -504,7 +506,9 @@ ala_events |>
            featureFacet2,
            featureFacet3) |> 
   summarise(recordCount = n()) |> 
-  write_csv(here("data", "processed", "monitoring_ibra.csv"))
+  write_csv(here("data", 
+                 "summary_monitoring_effort_terrestrial",
+                 "summary_monitoring_effort_terrestrial.csv"))
 
 ala_events |> 
   bind_rows(imos_events) |> 
@@ -518,4 +522,6 @@ ala_events |>
            featureFacet2,
            featureFacet3) |> 
   summarise(recordCount = n()) |> 
-  write_csv(here("data", "processed", "monitoring_imcra.csv"))
+  write_csv(here("data", 
+                 "summary_monitoring_effort_marine",
+                 "summary_monitoring_effort_marine.csv"))
