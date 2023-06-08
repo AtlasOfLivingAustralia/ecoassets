@@ -158,9 +158,71 @@ agg_ds |>
                        "summary_introduced_spp_occ_marine",
                        "summary_introduced_spp_occ_marine.csv"))
 
+### terrestrial threatened ---------
 
+agg_ds |> 
+  select(ibraRegion, 
+         year, 
+         epbcStatus, 
+         speciesID, 
+         occurrenceCount) |> 
+  filter(!is.na(ibraRegion),
+         year <= 2020) |> 
+  left_join(lookup_year_grp, by = join_by(year)) |>
+  group_by(ibraRegion, grp, epbcStatus) |>
+  summarise(recordCount = sum(occurrenceCount),
+            speciesCount = n_distinct(speciesID),
+            .groups = "drop") |>
+  left_join(lookup_start_end_grp, by = join_by(grp)) |> 
+  select(ibraRegion, 
+         yearStart, 
+         yearEnd, 
+         epbcStatus,
+         recordCount, 
+         speciesCount) |> 
+  write_csv_arrow(here("data",
+                       "summary_threatened_spp_occ_terrestrial",
+                       "summary_threatened_spp_occ_terrestrial.csv"))
+
+### marine threatened -------------
+
+agg_ds |> 
+  select(imcraRegion, 
+         year, 
+         epbcStatus, 
+         speciesID, 
+         occurrenceCount) |> 
+  filter(!is.na(imcraRegion),
+         year <= 2020) |> 
+  left_join(lookup_year_grp, by = join_by(year)) |>
+  group_by(imcraRegion, grp, epbcStatus) |>
+  summarise(recordCount = sum(occurrenceCount),
+            speciesCount = n_distinct(speciesID),
+            .groups = "drop") |>
+  left_join(lookup_start_end_grp, by = join_by(grp)) |> 
+  select(imcraRegion, 
+         yearStart, 
+         yearEnd, 
+         epbcStatus,
+         recordCount, 
+         speciesCount) |> 
+  write_csv_arrow(here("data",
+                       "summary_threatened_spp_occ_marine",
+                       "summary_threatened_spp_occ_marine.csv"))
 
  
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
