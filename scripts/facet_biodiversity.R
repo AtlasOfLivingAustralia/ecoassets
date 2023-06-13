@@ -1,4 +1,5 @@
-# brief description
+# Generates 1 aggregated biodiversity dataset and 6 faceted summaries derived 
+# from the main aggregated dataset
 
 # aggregated biodiversity dataset --------
 
