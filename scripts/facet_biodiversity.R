@@ -216,7 +216,68 @@ agg_ds |>
 
 ### protection status terrestrial -------
 
+ibra_capad <- agg_ds |> 
+  select(ibraRegion,
+         speciesID, 
+         speciesName,
+         epbcStatus,
+         capadStatus, 
+         occurrenceCount) |> 
+  filter(!is.na(ibraRegion)) |> 
+  group_by(ibraRegion,
+           speciesID, 
+           speciesName,
+           epbcStatus) |> 
+  collect() |> 
+  mutate(regionRecordCount = sum(occurrenceCount),
+         paPresence = case_when(
+           capadStatus %in% c("PA", "IPA") ~ occurrenceCount,
+           TRUE ~ 0),
+         protectedRecordCount = sum(paPresence),
+         ipaPresence = case_when(
+           capadStatus == "IPA" ~ occurrenceCount,
+           TRUE ~ 0),
+         indigenousProtectedRecordCount = sum(ipaPresence)) |> 
+  ungroup() |> 
+  select(-c(capadStatus, occurrenceCount, paPresence, ipaPresence)) |> 
+  distinct() 
+
+write_csv_arrow(ibra_capad, here("data",
+                                 "summary_protection_status_terrestrial",
+                                 "summary_protection_status_terrestrial.csv"))
+
 ### protection status marine --------
+
+imcra_capad <- agg_ds |> 
+  select(imcraRegion,
+         speciesID, 
+         speciesName,
+         epbcStatus,
+         capadStatus, 
+         occurrenceCount) |> 
+  filter(!is.na(imcraRegion)) |> 
+  group_by(imcraRegion,
+           speciesID, 
+           speciesName,
+           epbcStatus) |> 
+  collect() |> 
+  mutate(regionRecordCount = sum(occurrenceCount),
+         paPresence = case_when(
+           capadStatus %in% c("PA", "IPA") ~ occurrenceCount,
+           TRUE ~ 0),
+         protectedRecordCount = sum(paPresence),
+         ipaPresence = case_when(
+           capadStatus == "IPA" ~ occurrenceCount,
+           TRUE ~ 0),
+         indigenousProtectedRecordCount = sum(ipaPresence)) |> 
+  ungroup() |> 
+  select(-c(capadStatus, occurrenceCount, paPresence, ipaPresence)) |> 
+  distinct() 
+
+write_csv_arrow(imcra_capad, here("data",
+                                  "summary_protection_status_marine",
+                                  "summary_protection_status_marine.csv"))
+
 
 unlink("data/tmp_ds", recursive = TRUE)
 unlink("data/tmp_agg", recursive = TRUE)
