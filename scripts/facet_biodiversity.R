@@ -66,7 +66,7 @@ sum_occurrences <- function(fpath) {
              speciesID, 
              speciesName) |> 
     summarise(occurrenceCount = sum(counts), .groups = "drop") |> 
-    mutate(year = year_id) |> 
+    mutate(year = year_id, .before = 1) |> 
     write_parquet(sink = paste0("data/tmp_agg/year_", year_id, ".parquet"))
 
 }
@@ -77,7 +77,6 @@ open_dataset("data/tmp_agg", format = "parquet") |>
   write_csv_arrow(here("data",
                        "aggregated_aus_species_occ",
                        "aggregated_aus_species_occ.csv"))
-
 
 
 # summary datasets --------
@@ -106,6 +105,7 @@ lookup_start_end_grp <- tibble(yearStart = c(1900, seq(1971, 2016, 5)),
                                yearEnd = c(1970, seq(1975, 2020, 5)),
                                grp = LETTERS[1:11])
 
+
 ### terrestrial introduced ------
 
 agg_ds |> 
@@ -131,6 +131,7 @@ agg_ds |>
   write_csv_arrow(here("data",
                        "summary_introduced_spp_occ_terrestrial",
                        "summary_introduced_spp_occ_terrestrial.csv"))
+
 
 ### marine introduced ------
 
@@ -158,6 +159,7 @@ agg_ds |>
                        "summary_introduced_spp_occ_marine",
                        "summary_introduced_spp_occ_marine.csv"))
 
+
 ### terrestrial threatened ---------
 
 agg_ds |> 
@@ -183,6 +185,7 @@ agg_ds |>
   write_csv_arrow(here("data",
                        "summary_threatened_spp_occ_terrestrial",
                        "summary_threatened_spp_occ_terrestrial.csv"))
+
 
 ### marine threatened -------------
 
@@ -210,21 +213,10 @@ agg_ds |>
                        "summary_threatened_spp_occ_marine",
                        "summary_threatened_spp_occ_marine.csv"))
 
- 
 
+### protection status terrestrial -------
 
-
-
-
-
-
-
-
-
-
-
-
-
+### protection status marine --------
 
 unlink("data/tmp_ds", recursive = TRUE)
 unlink("data/tmp_agg", recursive = TRUE)
