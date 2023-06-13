@@ -156,7 +156,6 @@ ds |>
          decimalLatitude,
          decimalLongitude,
          basisOfRecord) |> 
-  mutate(basisOfRecord = tolower(basisOfRecord)) |> 
   left_join(locID, by = join_by(decimalLatitude, decimalLongitude)) |>
   select(-c(decimalLatitude, decimalLongitude)) |> 
   group_by(year) |> 
