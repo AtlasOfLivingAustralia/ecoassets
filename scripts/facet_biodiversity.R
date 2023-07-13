@@ -76,8 +76,8 @@ walk(pq_files, sum_occurrences)
 
 open_dataset("data/tmp_agg", format = "parquet") |> 
   write_csv_arrow(here("data",
-                       "aggregated_aus_species_occ",
-                       "aggregated_aus_species_occ.csv"))
+                       "aggregated_spp_occ",
+                       "aggregated_spp_occ.csv"))
 
 
 # summary datasets --------
