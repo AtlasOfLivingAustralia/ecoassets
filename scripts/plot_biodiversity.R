@@ -177,3 +177,117 @@ ggsave(here("plots", "heatmap_imcra_epbc_abs.png"),
 
 # choropleths -------
 
+### summarise proportions of different record types across time periods ----
+
+loc <- open_dataset("data/interim/rel_distinct_loc.parquet")
+occ <- open_dataset("data/interim/rel_occ_counts.parquet") 
+                    
+year_lookup <- tibble(year = as.double(1900:2020),
+                      yearStart = c(rep(1900, times = 71),
+                                     rep(seq(1971, 2016, by = 5), each = 5)),
+                      yearEnd = c(rep(1970, times = 71),
+                                   rep(seq(1975, 2020, by = 5), each = 5)))
+
+record_type_lookup <- tibble(basisOfRecord = c("PRESERVED_SPECIMEN", 
+                                               "HUMAN_OBSERVATION",
+                                               "OCCURRENCE",
+                                               "OBSERVATION",
+                                               "MATERIAL_CITATION", 
+                                               "MATERIAL_SAMPLE", 
+                                               "MACHINE_OBSERVATION",
+                                               "LIVING_SPECIMEN"),
+                             recordType = c("specimen",
+                                            "human_observation",
+                                            "unknown",
+                                            "human_observation",
+                                            "specimen",
+                                            "specimen",
+                                            "machine_observation",
+                                            "specimen"))
+
+
+joined_lookups <- occ |> 
+  filter(year <= 2020) |> 
+  left_join(loc, by = join_by(locationID)) |> 
+  left_join(record_type_lookup, by = join_by(basisOfRecord)) |> 
+  mutate(year = as.numeric(year)) |> 
+  left_join(year_lookup, by = join_by(year)) |> 
+  compute()
+
+ibra_prop <- joined_lookups |> 
+  filter(!is.na(ibraRegion)) |> 
+  group_by(ibraRegion, yearStart, yearEnd, recordType) |> 
+  summarise(summedCounts = sum(counts), .groups = "drop") |> 
+  collect() |> 
+  pivot_wider(names_from = recordType, 
+              values_from = summedCounts, 
+              values_fill = 0) |> 
+  rowwise() |> 
+  mutate(prop_human_obs = human_observation / 
+           sum(specimen, human_observation, unknown, machine_observation))
+
+imcra_prop <- joined_lookups |> 
+  filter(!is.na(imcraRegion)) |> 
+  group_by(imcraRegion, yearStart, yearEnd, recordType) |> 
+  summarise(summedCounts = sum(counts), .groups = "drop") |> 
+  collect() |> 
+  pivot_wider(names_from = recordType, 
+              values_from = summedCounts, 
+              values_fill = 0) |> 
+  rowwise() |> 
+  mutate(prop_human_obs = human_observation / 
+           sum(specimen, human_observation, unknown, machine_observation))
+
+# add spatial data
+ibra_shp <- st_read(here("data", "external", "ibra7", "ibra7_regions.shp")) |>
+  ms_simplify(keep = 0.2)
+
+ibra_sp <- ibra_prop |> 
+  rowwise() |> 
+  mutate(prop_discrete = cut(prop_human_obs, 
+                             breaks = c(0, 0.2, 0.4, 0.6, 0.8, 1.0), 
+                             labels = c(0.2, 0.4, 0.6, 0.8, 1.0), 
+                             include.lowest = TRUE)) |> 
+  full_join(ibra_shp, by = join_by(ibraRegion == REG_NAME_7)) |> 
+  select(ibraRegion, yearStart, yearEnd, prop_discrete, geometry) |> 
+  st_as_sf() |> 
+  group_by(yearStart) |> 
+  # base pipes still unhappy about . as placeholder
+  group_split(yearStart) %>%           
+  set_names(map(., ~.x$yearStart[1]))
+
+imcra_shp <- st_read(here("data", "external", "imcra4", "imcra4_meso.shp")) |>
+  ms_simplify(keep = 0.2)
+
+imcra_sp <- imcra_prop |> 
+  rowwise() |> 
+  mutate(prop_discrete = cut(prop_human_obs, 
+                             breaks = c(0, 0.2, 0.4, 0.6, 0.8, 1.0), 
+                             labels = c(0.2, 0.4, 0.6, 0.8, 1.0), 
+                             include.lowest = TRUE)) |> 
+  # fix typo in region name
+  mutate(imcraRegion = str_replace(imcraRegion, "Pilbarra", "Pilbara")) |> 
+  full_join(imcra_shp, by = join_by(imcraRegion == MESO_NAME)) |> 
+  select(imcraRegion, yearStart, yearEnd, prop_discrete, geometry) |> 
+  st_as_sf() |> 
+  group_by(yearStart) |> 
+  group_split(yearStart) %>%            
+  set_names(map(., ~.x$yearStart[1]))
+
+# static plots
+all_plots <- map2(imcra_sp, ibra_sp, plot_choropleth)
+
+plotnames <- map(names(all_plots), ~paste0("plots/choropleth_", ., ".png")) 
+
+walk2(plotnames, all_plots, ~ggsave(filename = .x, 
+                                    plot = .y, 
+                                    height = 10, 
+                                    width = 10, 
+                                    units = "in"))
+
+# animation
+list.files(path = "./plots", pattern = "^choropleth.*png$", full.names = TRUE) |> 
+  map(image_read) |>  # reads each path file
+  image_join() |>  # joins image
+  image_animate(delay = 100, optimize = TRUE) |>  # animates, can opt for number of loops
+  image_write("./plots/choropleth_human_obs.gif")
