@@ -14,3 +14,6 @@ source("scripts/plot_monitoring.R")
 source("scripts/create_relational_tables.R")
 source("scripts/facet_biodiversity.R")
 source("scripts/plot_biodiversity.R")
+
+# 5. state of forests datasets for ABARES
+source("scripts/state_of_forests.R")
