@@ -13,4 +13,4 @@ library(xml2)
 library(here)
 library(duckdb)
 
-galah_config(email = Sys.getenv("email"), verbose = TRUE)
+galah_config(email = Sys.getenv("ALA_EMAIL"), verbose = TRUE)
