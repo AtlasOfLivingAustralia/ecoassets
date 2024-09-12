@@ -3,6 +3,7 @@
 library(tidyverse)
 library(galah)
 library(arrow)
+library(assertthat)
 library(pointblank)
 library(ggnewscale)
 library(rmapshaper)
