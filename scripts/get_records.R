@@ -1,4 +1,4 @@
-# Downloads, saves, and checks records prior to downstream aggregation 
+# Downloads and saves records as parquet files prior to downstream aggregation 
 
 years <- as.numeric(c(1900:2023))
 
@@ -52,14 +52,3 @@ get_occ <- function(each_year) {
 }
 
 walk(years, get_occ)
-
-# TODO: write some tests to check data is right 
-# 1. correct number of columns downloaded 
-# 2. decimalLatitude, decimalLongitude, speciesID, and year should not
-# have any NAs 
-# 3. no columns should be entirely blank (NULL/NA) - might safeguard against
-# layers being disabled
-
-ds <- open_dataset("data/galah")
-
-length(ds$schema)

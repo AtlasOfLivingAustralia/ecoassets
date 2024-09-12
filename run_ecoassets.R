@@ -5,6 +5,7 @@ source("scripts/load_libraries.R")
 
 # 2. get records from biocache using {galah}
 source("scripts/get_records.R")
+source("scripts/check_records.R")
 
 # 3. monitoring datasets and plots 
 source("scripts/assemble_monitoring.R")
