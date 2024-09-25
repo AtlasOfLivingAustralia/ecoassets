@@ -20,22 +20,6 @@ loc <- ds |>
   distinct() |> 
   compute()
 
-# distinct_forest2018 <- loc |> 
-#   distinct(forest2018) |> 
-#   collect() 
-# 
-# distinct_forest2013 <- loc |> 
-#   distinct(forest2013) |> 
-#   collect() 
-# 
-# distinct_capad_t <- loc |> 
-#   distinct(capad_t_class) |> 
-#   collect() 
-# 
-# distinct_capad_m <- loc |> 
-#   distinct(capad_m_class) |> 
-#   collect() 
-
 # reclassify values in forest and capad fields, and add ID to simplify joins
 loc |> 
   mutate(
@@ -65,7 +49,6 @@ loc |>
 
 # taxon ------
 # every unique species and associated taxonomic ranks and GRIIS status 
-
 taxa <- ds |> 
   select(speciesID,
          kingdom, 
@@ -78,38 +61,44 @@ taxa <- ds |>
   distinct() |> 
   compute()
 
-# modified GRIIS files from DH
+# GRIIS version 1.10
 distribution <- read_tsv(here("data", 
                               "external", 
-                              "dwca-griis-australia-v1.6", 
+                              "dwca-griis-australia-v1.10", 
                               "distribution.txt"))
 
 species <- read_tsv(here("data",
                          "external",
-                         "dwca-griis-australia-v1.6",
+                         "dwca-griis-australia-v1.10",
                          "speciesprofile.txt"))
 
-taxon_edited <- read_tsv(here("data",
-                              "external",
-                              "dwca-griis-australia-v1.6",
-                              "taxon-edited.txt"))
+taxon <- read_tsv(here("data",
+                       "external",
+                       "dwca-griis-australia-v1.10",
+                       "taxon.txt"))
 
-griis_list_dh <- taxon_edited |> 
+griis_list <- taxon |> 
   full_join(distribution, by = join_by(id)) |> 
   full_join(species, by = join_by(id))
 
-# create GRIIS list that matches names in ALA, reclassify, join
-search_taxa_griis <- search_taxa(griis_list_dh$scientificName)
+# match names in GRIIS to names in ALA
+search_taxa_griis <- griis_list |>
+  select(kingdom, phylum, class, order, family, scientificName) |>
+  group_split(scientificName) |> 
+  map(\(df)
+      df |>
+        search_taxa()) |> 
+  bind_rows() 
 
 # remove duplicates and reclassify rows where the same species has > 1 GRIIS status
-griis_list <- search_taxa_griis |> 
-  filter(match_type == "exactMatch",
+griis_list_matched <- search_taxa_griis |> 
+  filter(match_type %in% c("exactMatch", "canonicalMatch"),
          issues == "noIssue",
          !is.na(species)) |> 
   select(search_term, scientific_name, taxon_concept_id) |> 
-  inner_join(griis_list_dh, 
-             by = join_by(search_term == scientificName),
-             relationship = "many-to-many") |> 
+  mutate(search_term_last = str_split_i(search_term, "_", -1)) |>
+  inner_join(griis_list,
+            by = join_by(search_term_last == scientificName)) |> 
   select(scientific_name, isInvasive) |> 
   mutate(griisStatus = case_when(
     isInvasive == "Invasive"~ "Invasive",
@@ -121,12 +110,12 @@ griis_list <- search_taxa_griis |>
          griisStatus = case_when(
            count > 1 & "Invasive" %in% (unique(griisStatus)) ~ "Invasive",
            TRUE ~ griisStatus)) |> 
-    ungroup() |> 
-    select(-count) |> 
-    distinct() 
+  ungroup() |> 
+  select(-count) |> 
+  distinct() 
     
 taxa |> 
-  left_join(griis_list, by = join_by(speciesName == scientific_name)) |> 
+  left_join(griis_list_matched, by = join_by(speciesName == scientific_name)) |> 
   collect() |> 
   mutate(griisStatus = replace_na(griisStatus, "Native")) |> 
   col_vals_not_null(columns = vars(speciesID, griisStatus, speciesName)) |> 
@@ -139,8 +128,6 @@ taxa |>
 dir.create("data/tmp_loc")
 dir.create("data/tmp_grp")
 dir.create("data/tmp_epbc")
-# because pointblank doesn't support arrow ds yet
-duck_con <- dbConnect(duckdb::duckdb())
 
 # substitute lat/lon with locationID and partition by year to 
 # avoid running out of memory when grouping and counting
@@ -162,6 +149,10 @@ ds |>
   write_dataset(path = "data/tmp_loc", format = "parquet")
   
 # group_by and summarise for each year, then combine as a ds
+# TODO: possibly move this function and the other summarising function in 
+# facet_biodiversity.R to R/ and pass in the columns to group_by with 
+# across(all_of()) and a vector - have not tested if this will work
+
 pq_loc_files <- list.files("data/tmp_loc", full.names = TRUE, recursive = TRUE)
 
 count_by_year <- function(fpath) {
@@ -185,36 +176,50 @@ walk(pq_loc_files, count_by_year)
 ### checks -----
 # 1. number of rows in ungrouped ds == sum of counts in grouped ds 
 ds_loc <- open_dataset("data/tmp_loc", format = "parquet")
-duck_loc <- ds_loc |> to_duckdb()
 
 ds_grp <- open_dataset("data/tmp_grp", format = "parquet")
 sum_counts_grp <- ds_grp |> 
   pull(counts, as_vector = TRUE) |> 
   sum()
 
-row_count_match(duck_loc, count = sum_counts_grp)
+are_equal(nrow(ds_loc), sum_counts_grp)
 
-# EPBC list from Cam (via DAWE)
-epbc_list_cam <- read_csv(here("data", 
-                               "external", 
-                               "epbc_20220503.csv"),
-                          col_select = c(`Scientific Name`, 
-                                         `Threatened status`))
+# EPBC list from DCCEEW 
+# https://www.environment.gov.au/sprat-public/action/report
+epbc_list <- read_csv(here("data", 
+                           "external", 
+                           "epbc_24092024.csv"),
+                      skip = 1,
+                      col_select = c(scientificName = `Scientific Name`, 
+                                     epbc_status = `EPBC Threat Status`,
+                                     kingdom = Kingdom,
+                                     phylum = Phylum, 
+                                     class = Class, 
+                                     order = Order, 
+                                     family = Family,
+                                     genus = Genus))
 
-# create EPBC list that exactly matches names in ALA, reclassify, join
-search_taxa_epbc <- search_taxa(epbc_list_cam$`Scientific Name`)
+# match names in EPBC to names in ALA
+search_taxa_epbc <- epbc_list |>
+  select(kingdom, phylum, class, order, family, genus, scientificName) |>
+  group_split(scientificName) |> 
+  map(\(df)
+      df |>
+        search_taxa()) |> 
+  bind_rows() 
 
 # remove duplicates and reclassify rows where the same species has > 1 EPBC status
-epbc_list <- search_taxa_epbc |> 
+epbc_list_matched <- search_taxa_epbc |> 
   filter(match_type == "exactMatch",
          issues == "noIssue",
          !is.na(species)) |> 
   select(search_term, scientific_name, taxon_concept_id) |> 
-  inner_join(epbc_list_cam, 
-             by = join_by(search_term == `Scientific Name`)) |> 
-  select(scientific_name, `Threatened status`) |> 
+  mutate(search_term_last = str_split_i(search_term, "_", -1)) |> 
+  inner_join(epbc_list, 
+             by = join_by(search_term_last == scientificName)) |> 
+  select(scientific_name, epbc_status) |> 
   distinct() |> 
-  mutate(fct_threat = as_factor(`Threatened status`) |> 
+  mutate(fct_threat = as_factor(epbc_status) |> 
            fct_relevel("Extinct",
                        "Extinct in the wild",
                        "Critically Endangered",
@@ -227,14 +232,14 @@ epbc_list <- search_taxa_epbc |>
   slice_min(fct_threat) |> 
   ungroup() |> 
   mutate(epbcStatus = as.character(fct_threat)) |> 
-  select(-c(count_species, `Threatened status`, fct_threat))
+  select(-c(count_species, epbc_status, fct_threat))
 
 ds_grp |> 
-  left_join(epbc_list, 
+  left_join(epbc_list_matched, 
             by = join_by(speciesName == scientific_name)) |> 
   mutate(epbcStatus = case_when(
     is.na(epbcStatus) ~ "Not listed",
-    TRUE ~ epbcStatus)) |> 
+    TRUE ~ epbcStatus)) |>
   select(-speciesName) |> 
   write_dataset(path = "data/tmp_epbc", format = "parquet")
 
@@ -245,13 +250,10 @@ sum_counts_epbc <- ds_epbc |>
   pull(counts, as_vector = TRUE) |> 
   sum()
 
-row_count_match(duck_loc, count = sum_counts_epbc)
+are_equal(nrow(ds_loc), sum_counts_epbc)
 
 # 2. number of rows before join == number of rows after join
-nrow_grp <- ds_grp |> nrow()
-duck_epbc <- ds_epbc |> to_duckdb()
-
-row_count_match(duck_epbc, count = nrow_grp)
+are_equal(nrow(ds_grp), nrow(ds_epbc))
 
 # write to disk and cleanup
 open_dataset("data/tmp_epbc", format = "parquet") |> 
@@ -260,4 +262,3 @@ open_dataset("data/tmp_epbc", format = "parquet") |>
 unlink("data/tmp_loc", recursive = TRUE)
 unlink("data/tmp_grp", recursive = TRUE)
 unlink("data/tmp_epbc", recursive = TRUE)
-dbDisconnect(duck_con, shutdown=TRUE)
