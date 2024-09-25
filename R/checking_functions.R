@@ -11,7 +11,7 @@ check_col_count <- function(ds, col_count) {
 
 check_not_na <- function(ds, col_name) {
    assert_that(
-    sum(is.na(pull(ds, {{col_name}}, as_vector = FALSE))) == 0,
+    sum(is.na(pull(ds, {{col_name}}, as_vector = TRUE))) == 0,
     msg = "this column contains one or more NAs"
   )
  }
@@ -19,7 +19,7 @@ check_not_na <- function(ds, col_name) {
 # incomplete
 check_not_all_na <- function(ds, col_name) {
   assert_that(
-    all(is.na(pull(ds, {{col_name}}, as_vector = FALSE))) == 0,
+    all(is.na(pull(ds, {{col_name}}, as_vector = TRUE))) == 0,
     msg = "this column only contains NAs"
   )
 }
