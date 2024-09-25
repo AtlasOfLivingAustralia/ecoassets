@@ -1,4 +1,3 @@
-# Loads libraries necessary for running EcoAssets 
 
 library(tidyverse)
 library(galah)
@@ -12,6 +11,5 @@ library(showtext)
 library(sf)
 library(xml2)
 library(here)
-library(duckdb)
 
 galah_config(email = Sys.getenv("ALA_EMAIL"), verbose = TRUE)
