@@ -3,6 +3,7 @@
 
 ds <- open_dataset("data/galah", format = "parquet")
 
+
 # location ----
 # every unique lat/lon combination and associated spatial values 
 # (CAPAD, IBRA, IMCRA, state/territory, Forests of Australia)
@@ -48,20 +49,10 @@ loc |>
 
 
 # taxon ------
-# every unique species and associated taxonomic ranks and GRIIS status 
-taxa <- ds |> 
-  select(speciesID,
-         kingdom, 
-         phylum,
-         class,
-         order,
-         family,
-         genus,
-         speciesName = species) |> 
-  distinct() |> 
-  compute()
+# every unique species and associated taxonomic ranks, GRIIS status, EPBC status 
 
-# GRIIS version 1.10
+### GRIIS ------
+# version 1.10 from GBIF
 distribution <- read_tsv(here("data", 
                               "external", 
                               "dwca-griis-australia-v1.10", 
@@ -113,79 +104,9 @@ griis_list_matched <- search_taxa_griis |>
   ungroup() |> 
   select(-count) |> 
   distinct() 
-    
-taxa |> 
-  left_join(griis_list_matched, by = join_by(speciesName == scientific_name)) |> 
-  collect() |> 
-  mutate(griisStatus = replace_na(griisStatus, "Native")) |> 
-  col_vals_not_null(columns = vars(speciesID, griisStatus, speciesName)) |> 
-  write_parquet(sink = "data/interim/rel_distinct_taxa.parquet")
 
-
-# occurrences ------
-# grouped counts of speciesID, year, location, basisOfRecord, epbcStatus 
-
-dir.create("data/tmp_loc")
-dir.create("data/tmp_grp")
-dir.create("data/tmp_epbc")
-
-# substitute lat/lon with locationID and partition by year to 
-# avoid running out of memory when grouping and counting
-locID <- read_parquet("data/interim/rel_distinct_loc.parquet", 
-                      col_select = c(locationID, 
-                                     decimalLatitude, 
-                                     decimalLongitude))
-
-ds |> 
-  select(speciesID,
-         speciesName = species, 
-         year,
-         decimalLatitude,
-         decimalLongitude,
-         basisOfRecord) |> 
-  left_join(locID, by = join_by(decimalLatitude, decimalLongitude)) |>
-  select(-c(decimalLatitude, decimalLongitude)) |> 
-  group_by(year) |> 
-  write_dataset(path = "data/tmp_loc", format = "parquet")
-  
-# group_by and summarise for each year, then combine as a ds
-# TODO: possibly move this function and the other summarising function in 
-# facet_biodiversity.R to R/ and pass in the columns to group_by with 
-# across(all_of()) and a vector - have not tested if this will work
-
-pq_loc_files <- list.files("data/tmp_loc", full.names = TRUE, recursive = TRUE)
-
-count_by_year <- function(fpath) {
-  
-  year_id <- sub('.*=(.*?)/.*', '\\1', fpath)
-  
-  fpath |> 
-    read_parquet() |> 
-    group_by(speciesID,
-             speciesName,
-             locationID,
-             basisOfRecord) |> 
-    summarise(counts = n(), .groups = "drop") |>
-    mutate(year = year_id) |> 
-    write_parquet(sink = paste0("data/tmp_grp/year_", year_id, ".parquet"))
-    
-}
-
-walk(pq_loc_files, count_by_year)
-
-### checks -----
-# 1. number of rows in ungrouped ds == sum of counts in grouped ds 
-ds_loc <- open_dataset("data/tmp_loc", format = "parquet")
-
-ds_grp <- open_dataset("data/tmp_grp", format = "parquet")
-sum_counts_grp <- ds_grp |> 
-  pull(counts, as_vector = TRUE) |> 
-  sum()
-
-are_equal(nrow(ds_loc), sum_counts_grp)
-
-# EPBC list from DCCEEW 
-# https://www.environment.gov.au/sprat-public/action/report
+### EPBC ------
+# list from DCCEEW https://www.environment.gov.au/sprat-public/action/report
 epbc_list <- read_csv(here("data", 
                            "external", 
                            "epbc_24092024.csv"),
@@ -234,31 +155,91 @@ epbc_list_matched <- search_taxa_epbc |>
   mutate(epbcStatus = as.character(fct_threat)) |> 
   select(-c(count_species, epbc_status, fct_threat))
 
-ds_grp |> 
-  left_join(epbc_list_matched, 
-            by = join_by(speciesName == scientific_name)) |> 
-  mutate(epbcStatus = case_when(
-    is.na(epbcStatus) ~ "Not listed",
-    TRUE ~ epbcStatus)) |>
-  select(-speciesName) |> 
-  write_dataset(path = "data/tmp_epbc", format = "parquet")
+taxa <- ds |> 
+  select(speciesID,
+         kingdom, 
+         phylum,
+         class,
+         order,
+         family,
+         genus,
+         speciesName = species) |> 
+  distinct() |> 
+  compute()
 
-### checks ----
-# 1. number of rows in ungrouped ds == sum of counts in final grouped ds 
-ds_epbc <- open_dataset("data/tmp_epbc", format = "parquet")
-sum_counts_epbc <- ds_epbc |> 
-  pull(counts, as_vector = TRUE) |> 
-  sum()
+taxa |> 
+  left_join(griis_list_matched, by = join_by(speciesName == scientific_name)) |> 
+  left_join(epbc_list_matched, by = join_by(speciesName == scientific_name)) |> 
+  collect() |> 
+  mutate(griisStatus = replace_na(griisStatus, "Native"),
+         epbcStatus = case_when(
+           is.na(epbcStatus) ~ "Not listed",
+           TRUE ~ epbcStatus)) |> 
+  col_vals_not_null(columns = vars(speciesID, griisStatus, epbcStatus, speciesName)) |> 
+  write_parquet(sink = "data/interim/rel_distinct_taxa.parquet")
 
-are_equal(nrow(ds_loc), sum_counts_epbc)
+### checks -----
+# number of rows before join == number of rows after join
+are_equal(nrow(taxa), nrow(open_dataset("data/interim/rel_distinct_taxa.parquet")))
 
-# 2. number of rows before join == number of rows after join
-are_equal(nrow(ds_grp), nrow(ds_epbc))
 
+# occurrences ------
+# grouped counts of speciesID, year, location, basisOfRecord
+
+dir.create("data/tmp_loc")
+dir.create("data/tmp_grp")
+
+# substitute lat/lon with locationID and partition by year to 
+# avoid running out of memory when grouping and counting
+locID <- read_parquet("data/interim/rel_distinct_loc.parquet", 
+                      col_select = c(locationID, 
+                                     decimalLatitude, 
+                                     decimalLongitude))
+
+ds |> 
+  select(speciesID,
+         year,
+         decimalLatitude,
+         decimalLongitude,
+         basisOfRecord) |> 
+  left_join(locID, by = join_by(decimalLatitude, decimalLongitude)) |>
+  select(-c(decimalLatitude, decimalLongitude)) |> 
+  group_by(year) |> 
+  write_dataset(path = "data/tmp_loc", format = "parquet")
+  
+# group_by and summarise for each year, then combine as a ds
+# TODO: possibly move this function and the other summarising function in 
+# facet_biodiversity.R to R/ and pass in the columns to group_by with 
+# across(all_of()) and a vector - have not tested if this will work
+
+pq_loc_files <- list.files("data/tmp_loc", full.names = TRUE, recursive = TRUE)
+
+count_by_year <- function(fpath) {
+  
+  year_id <- sub('.*=(.*?)/.*', '\\1', fpath)
+  
+  fpath |> 
+    read_parquet() |> 
+    group_by(speciesID,
+             locationID,
+             basisOfRecord) |> 
+    summarise(counts = n(), .groups = "drop") |>
+    mutate(year = year_id, .before = counts) |> 
+    write_parquet(sink = paste0("data/tmp_grp/year_", year_id, ".parquet"))
+    
+}
+
+walk(pq_loc_files, count_by_year)
+
+### checks -----
+# number of rows in ungrouped ds == sum of counts in grouped ds 
+ds_loc <- open_dataset("data/tmp_loc", format = "parquet")
+ds_grp <- open_dataset("data/tmp_grp", format = "parquet")
+are_equal(nrow(ds_loc), sum(pull(ds_grp, counts, as_vector = TRUE)))
+                            
 # write to disk and cleanup
-open_dataset("data/tmp_epbc", format = "parquet") |> 
+open_dataset("data/tmp_grp", format = "parquet") |> 
   write_parquet(sink = "data/interim/rel_occ_counts.parquet")
 
 unlink("data/tmp_loc", recursive = TRUE)
 unlink("data/tmp_grp", recursive = TRUE)
-unlink("data/tmp_epbc", recursive = TRUE)
