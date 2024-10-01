@@ -21,11 +21,10 @@ loc <- open_dataset(here("data", "interim", "rel_distinct_loc.parquet"),
 occ <- open_dataset(here("data", "interim", "rel_occ_counts.parquet"),
                     format = "parquet",
                     schema = schema(speciesID = large_utf8(), 
-                                    year = int32(),
+                                    locationID = int32(),
                                     basisOfRecord = string(),
-                                    counts = int32(),
-                                    epbcStatus = string(),
-                                    locationID = int32()))
+                                    year = int32(),
+                                    counts = int32()))
 
 taxa <- open_dataset(here("data", "interim", "rel_distinct_taxa.parquet"),
                     format = "parquet",
@@ -37,7 +36,8 @@ taxa <- open_dataset(here("data", "interim", "rel_distinct_taxa.parquet"),
                                     family = string(),
                                     genus = string(),
                                     speciesName = string(),
-                                    griisStatus = string()))
+                                    griisStatus = string(),
+                                    epbcStatus = string()))
 
 occ |> 
   left_join(taxa, by = join_by(speciesID)) |> 
@@ -46,6 +46,8 @@ occ |>
   select(-c(locationID, decimalLatitude, decimalLongitude)) |> 
   group_by(year) |> 
   write_dataset(path = "data/tmp_ds", format = "parquet")
+
+are_equal(nrow(occ), nrow(open_dataset("data/tmp_ds")))
 
 pq_files <- list.files("data/tmp_ds", full.names = TRUE, recursive = TRUE)
 
@@ -79,6 +81,11 @@ open_dataset("data/tmp_agg", format = "parquet") |>
                        "aggregated_spp_occ",
                        "aggregated_spp_occ.csv"))
 
+tmp_agg_ds <- open_dataset("data/tmp_agg")
+agg_spp_occ <- open_dataset("data/aggregated_spp_occ/aggregated_spp_occ.csv", format = "csv")
+are_equal(nrow(open_dataset("data/galah")), 
+          nrow(agg_spp_occ),
+          sum(pull(tmp_agg_ds, occurrenceCount, as_vector = TRUE)))
 
 # summary datasets --------
 
