@@ -287,6 +287,74 @@ write_csv_arrow(imcra_capad, here("data",
                                   "summary_protection_status_marine.csv"))
 
 
+# checks, clean up ------
+
+# terrestrial
+sum_terr <- agg_ds |> 
+  filter(year <= 2020,
+         !is.na(ibraRegion)) |> 
+  pull(occurrenceCount, as_vector = TRUE) |>
+  sum()
+
+terr_int <- read_csv(here("data",
+                          "summary_introduced_spp_occ_terrestrial",
+                          "summary_introduced_spp_occ_terrestrial.csv"))
+
+terr_thr <- read_csv(here("data",
+                          "summary_threatened_spp_occ_terrestrial",
+                          "summary_threatened_spp_occ_terrestrial.csv"))
+
+are_equal(sum_terr, sum(terr_int$recordCount), sum(terr_thr$recordCount))
+
+# marine 
+sum_marine <- agg_ds |> 
+  filter(year <= 2020,
+         !is.na(imcraRegion)) |> 
+  pull(occurrenceCount, as_vector = TRUE) |>
+  sum()
+
+marine_int <- read_csv(here("data",
+                            "summary_introduced_spp_occ_marine",
+                            "summary_introduced_spp_occ_marine.csv"))
+
+marine_thr <- read_csv(here("data",
+                            "summary_threatened_spp_occ_marine",
+                            "summary_threatened_spp_occ_marine.csv"))
+
+are_equal(sum_marine, sum(marine_int$recordCount), sum(marine_thr$recordCount))
+
+# capad
+test_col_vals_gte(object = ibra_capad, 
+                  columns = regionRecordCount, 
+                  value = vars(protectedRecordCount))
+
+test_col_vals_gte(object = ibra_capad, 
+                  columns = protectedRecordCount, 
+                  value = vars(indigenousProtectedRecordCount))
+
+
+test_col_vals_gte(object = imcra_capad, 
+                  columns = regionRecordCount, 
+                  value = vars(protectedRecordCount))
+
+
+test_col_vals_gte(object = imcra_capad, 
+                  columns = protectedRecordCount, 
+                  value = vars(indigenousProtectedRecordCount))
+
+
+ibra_capad_count <- agg_ds |>
+  filter(!is.na(ibraRegion)) |>
+  pull(occurrenceCount, as_vector = TRUE) |>
+  sum()
+are_equal(sum(ibra_capad$regionRecordCount), ibra_capad_count)
+
+imcra_capad_count <- agg_ds |>
+  filter(!is.na(imcraRegion)) |>
+  pull(occurrenceCount, as_vector = TRUE) |>
+  sum()
+are_equal(sum(imcra_capad$regionRecordCount), imcra_capad_count)
+
+
 unlink("data/tmp_ds", recursive = TRUE)
 unlink("data/tmp_agg", recursive = TRUE)
-
