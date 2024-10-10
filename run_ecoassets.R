@@ -1,21 +1,27 @@
 # libraries -----
-library(tidyverse)
-library(galah)
-library(arrow)
-library(assertthat)
-library(pointblank)
-library(ggnewscale)
-library(rmapshaper)
-library(magick)
-library(showtext)
-library(sf)
-library(xml2)
-library(here)
+{
+  library(tidyverse)
+  library(galah)
+  library(arrow)
+  library(assertthat)
+  library(pointblank)
+  library(ggnewscale)
+  library(rmapshaper)
+  library(magick)
+  library(showtext)
+  library(sf)
+  library(xml2)
+  library(here)
+  library(httr)
+  library(jsonlite)
+}
 # TODO: source functions here 
 
 
-# options / environement variables ----- 
+# options / environment variables ----- 
 galah_config(email = Sys.getenv("ALA_EMAIL"), verbose = TRUE)
+options(arrow.pull_as_vector = TRUE)
+
 years <- as.numeric(c(1900:2023))
 
 
@@ -26,13 +32,13 @@ walk(years, get_data)
 # check data -----
 ds <- open_dataset("data/galah")
 assert_that(are_equal(ncol(ds), 33))
-assert_that(noNA(pull(ds, year, as_vector = TRUE)))
-assert_that(noNA(pull(ds, decimalLatitude, as_vector = TRUE)))
-assert_that(noNA(pull(ds, decimalLongitude, as_vector = TRUE)))
-assert_that(noNA(pull(ds, speciesID, as_vector = TRUE)))
+assert_that(noNA(pull(ds, year)))
+assert_that(noNA(pull(ds, decimalLatitude)))
+assert_that(noNA(pull(ds, decimalLongitude)))
+assert_that(noNA(pull(ds, speciesID)))
 # TODO: loop this over all columns
 assert_that(not_all_NA(ds, "cl10000"))
-
+lapply(names(ds)[1:3], not_all_NA, ds = ds)
 
 
 
