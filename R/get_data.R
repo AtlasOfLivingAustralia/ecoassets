@@ -1,6 +1,6 @@
-#' Get data
+#' Get occurrences
 #'
-#' `get_data()` downloads and saves occurrence records from the ALA as parquet
+#' `get_occ()` downloads and saves occurrence records from the ALA as parquet
 #' files
 #'
 #' @param each_year The year to filter records to
@@ -9,7 +9,7 @@
 #'   filename is prefixed with "occ_" and ends with the year provided in the
 #'   `each_year` param
 #' @export
-get_data <- function(each_year) {
+get_occ <- function(each_year) {
   
   res <- galah_call() |>
     galah_apply_profile(ALA) |>
@@ -56,4 +56,22 @@ get_data <- function(each_year) {
   res |> 
     write_parquet(sink = paste0("data/galah/occ_", each_year, ".parquet"))
   
+}
+
+#' Get left and right values from the API for each kingdom in the ALA
+#'
+#' @param query The URL string to use as a query on the namematching API
+#'
+#' @return A tibble with five columns: the name of the kingdom being queried,
+#'   the left and right values associated with the kingdom, and details of the
+#'   match type and whether there were any issues associated with the query
+#' @export
+get_lft_rgt <- function(query) {
+  x <- GET(query)
+  y <- fromJSON(rawToChar(x$content))
+  tibble(kingdom = y$kingdom,
+         left = y$lft,
+         right = y$rgt,
+         match_type = y$matchType,
+         issues = y$issues)
 }
