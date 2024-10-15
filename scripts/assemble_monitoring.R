@@ -31,28 +31,37 @@ ds <- open_dataset("data/galah")
 # least species level, and have information about datasetID, sampling protocol, 
 # location, and date. 
 
-event_records <- ds |> 
+source("R/summarising_functions.R")
+dir.create("data/tmp_events")
+dir.create("data/tmp_events_agg")
+
+ds |> 
   filter(year >= 2010,
          !is.na(eventID),
          !is.na(dataResourceUid)) |> 
   mutate(samplingProtocol = tolower(samplingProtocol),
-         eventID = tolower(eventID)) |> 
-  group_by(decimalLatitude,
-           decimalLongitude,
-           cl22, 
-           cl1048,
-           cl966,
-           year, 
-           eventID,
-           dataResourceUid,
-           dataResourceName, 
-           samplingProtocol) |> 
-  summarise(occCount = n(),
-            speciesCount = n_distinct(species),
-            minLeft = min(lft),
-            maxRight = max(rgt)) |> 
-  ungroup() |> 
-  collect()
+         eventID = tolower(eventID)) |>
+  group_by(year) |> 
+  write_dataset(path = "data/tmp_events", format = "parquet")
+
+pq_files <- list.files("data/tmp_events", full.names = TRUE, recursive = TRUE)
+walk(pq_files, summarise_events)
+events_ds <- open_dataset("data/tmp_events_agg")
+
+# Get left and right values for each kingdom
+url <- "https://namematching-ws.ala.org.au/api/search?q="
+kingdoms <- search_fields("kingdom") |>
+  show_values()
+queries <- paste0(url, kingdoms$kingdom)
+
+kingdoms_lft_rgt <- queries |> 
+  map(get_lft_rgt) |> 
+  list_rbind() |> 
+  col_vals_equal(columns = match_type, value = "exactMatch") |> 
+  col_vals_equal(columns = issues, value = "noIssue") |> 
+  select(kingdom, left, right)
+
+saveRDS(kingdoms_lft_rgt, "data/interim/kingdoms_lft_rgt_2023.RDS")
 
 # Protocol records are grouped event records that meet a set of criteria, and 
 # can be used as a filter to exclude unwanted event records downstream. Remove 
@@ -63,9 +72,7 @@ event_records <- ds |>
 #    include animal records (i.e. more likely to be an incidental collection 
 #    of observations rather than directed monitoring effort)
 
-kingdoms_lft_rgt <- readRDS(here("data", "interim", "kingdoms_lft_rgt.RDS"))
-
-protocol_records <- event_records |> 
+grouped_events <- events_ds |> 
   group_by(dataResourceUid,
            dataResourceName,
            samplingProtocol, 
@@ -74,11 +81,32 @@ protocol_records <- event_records |>
             maxSpeciesCount = max(speciesCount),
             maxOccCount = max(occCount),
             minMinLeft = min(minLeft),
-            maxMaxRight = max(maxRight)) |> 
-  ungroup() |> 
-  col_vals_lte(columns = vars(minMinLeft), value = vars(maxMaxRight)) |> 
+            maxMaxRight = max(maxRight),
+            .groups = "drop") |> 
+  collect() |> 
+  col_vals_lte(columns = vars(minMinLeft), value = vars(maxMaxRight)) 
+
+protocol_records <- grouped_events |> 
   filter(eventsCount >= 10,
          maxSpeciesCount >= 5) |> 
+  
+
+  
+
+# protocol_records <- event_records |> 
+#   group_by(dataResourceUid,
+#            dataResourceName,
+#            samplingProtocol, 
+#            eventID) |> 
+#   summarise(eventsCount = n(),
+#             maxSpeciesCount = max(speciesCount),
+#             maxOccCount = max(occCount),
+#             minMinLeft = min(minLeft),
+#             maxMaxRight = max(maxRight)) |> 
+#   ungroup() |> 
+#   col_vals_lte(columns = vars(minMinLeft), value = vars(maxMaxRight)) |> 
+  # filter(eventsCount >= 10,
+  #        maxSpeciesCount >= 5) |> 
   left_join(kingdoms_lft_rgt,
             by = join_by(between(minMinLeft, lft, rgt, bounds = "[]"))) |> 
   select(-c(lft, rgt, rank)) |> 
@@ -227,14 +255,14 @@ saveRDS(ala_events, "data/interim/events_ala.RDS")
 # TERN -----
 
 # data was emailed as a csv from TERN
-tern_csv <- read_csv(here("data", "external", "tern-20230323.csv"))
+tern_csv <- read_csv(here("data", "external", "tern-20241010.csv"))
 
 ### TERN dates -------
 # Event dates are each calendar year in the pipe-delimited visit_date column. 
 # If an event lacks a visit date, then the date is every year from 
 # commissioned_date onwards. 
 
-year_end_tern = 2022
+year_end_tern = 2023
 
 ongoing <- tern_csv |> 
   filter(!(is.na(visit_date) & is.na(date_commissioned))) |> 
@@ -245,13 +273,13 @@ ongoing <- tern_csv |>
   nest(data = c(year_start, year_end)) |> 
   mutate(year = map(data, ~ seq(.x$year_start, .x$year_end, by = 1))) |> 
   select(-data, -rowname) |> 
-  unnest(cols = year)
+  unnest(cols = year) 
 
 tern_dates <- tern_csv |> 
   filter(!is.na(visit_date)) |> 
   filter(visit_date != "ongoing") |> 
   separate_longer_delim(visit_date, delim = "|") |> 
-  mutate(year = year(dmy(visit_date))) |> 
+  mutate(year = year(dmy(visit_date))) |>
   bind_rows(ongoing) |> 
   select(-date_commissioned, -visit_date) |> 
   filter(year >= 2010)
@@ -261,7 +289,7 @@ tern_spatial <- tern_dates |>
   st_as_sf(coords = c("long", "lat"),
            crs = 4326,
            remove = FALSE) |> 
-  st_join(ibra_sf, join = st_intersects) |>
+  st_join(ibra_sf, join = st_intersects) |> 
   # removes stations in NZ
   filter(!is.na(region)) |>
   st_join(states_sf, join = st_intersects) |> 
@@ -283,6 +311,8 @@ mapping_tern <- read_csv(here("data", "external", "events_mapping.csv")) |>
   unique()
 
 # Reclassify some keywords so they map to the provided options
+# This needs to be done manually by inspecting the dataset every year and 
+# identifying features that need reclassification before joining
 tern_events <- tern_spatial |> 
   separate_longer_delim(features_of_interest, delim = " | ") |> 
   mutate(features_of_interest = tolower(features_of_interest),
@@ -290,6 +320,8 @@ tern_events <- tern_spatial |>
            features_of_interest == "fauna population" ~ "animal population",
            features_of_interest == "flux" ~ "climate",
            features_of_interest == "soil surface" ~ "soil horizon",
+           features_of_interest == "disturbance" ~ "vegetation disturbance",
+           features_of_interest == "weather" ~ "climate",
            TRUE ~ features_of_interest)) |> 
   left_join(mapping_tern, by = join_by(features_of_interest == keyword)) |> 
   rowwise() |> 
