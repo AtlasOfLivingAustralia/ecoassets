@@ -1,5 +1,6 @@
 # libraries -----
 {
+  library(conflicted)
   library(tidyverse)
   library(galah)
   library(arrow)
@@ -18,6 +19,12 @@
 # TODO: source functions here 
 
 
+conflicts_prefer(
+  dplyr::filter,
+  tidyr::unnest
+)
+
+
 # options / environment variables ----- 
 galah_config(email = Sys.getenv("ALA_EMAIL"), verbose = TRUE)
 options(arrow.pull_as_vector = TRUE)
@@ -26,7 +33,7 @@ years <- as.numeric(c(1900:2023))
 
 
 # get data ----- 
-walk(years, get_data)
+walk(years, get_occ)
 
 
 # check data -----
