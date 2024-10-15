@@ -427,18 +427,18 @@ saveRDS(imos_data, here("data", "interim", "events_imos_raw.RDS"))
 # imos_data <- readRDS(here("data", "interim", "events_imos_raw.RDS"))
 
 ### IMOS dates ---------
-year_end_imos = 2022
+year_end_imos = 2023
 
 imos_dates <- imos_data |> 
   separate_wider_delim(start_period, 
                        delim = "T", 
                        names_sep = "", 
-                       too_few = "align_start") |> 
+                       too_few = "align_start") |>
   separate_wider_delim(end_period, 
                        delim = "T", 
                        names_sep = "", 
                        too_few = "align_start") |> 
-  select(-start_period2, -end_period2) |> 
+  select(-start_period2, -end_period2) |>  
   mutate(start_year = year(parse_date_time(start_period1, c("ymd", "ym"))),
          end_year = year(parse_date_time(end_period1, c("ymd", "ym"))),
          inferred_end_year = case_when(
@@ -451,7 +451,7 @@ imos_dates <- imos_data |>
          inferred_dq_issue == "correct") |> 
   rownames_to_column() |>
   nest(data = c(start_year, inferred_end_year)) |> 
-  mutate(year = map(data, ~ seq(.x$start_year, .x$inferred_end_year, by = 1))) |> 
+  mutate(year = map(data, ~ seq(.x$start_year, .x$inferred_end_year, by = 1))) |>
   select(-c(data, 
             rowname, 
             end_year, 
