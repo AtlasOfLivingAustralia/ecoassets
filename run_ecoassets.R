@@ -16,7 +16,9 @@
   library(httr)
   library(jsonlite)
 }
-# TODO: source functions here? 
+
+list.files(path = "R", full.names = TRUE) |> 
+  walk(source, verbose = FALSE)
 
 conflicts_prefer(
   dplyr::filter,
