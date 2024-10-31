@@ -58,20 +58,22 @@ get_occ <- function(each_year) {
   
 }
 
-#' Get left and right values from the API for each kingdom in the ALA
+#' Get left and right values from the API for each taxonomic rank being queried
 #'
 #' @param query The URL string to use as a query on the namematching API
 #'
-#' @return A tibble with five columns: the name of the kingdom being queried,
-#'   the left and right values associated with the kingdom, and details of the
-#'   match type and whether there were any issues associated with the query
+#' @return A tibble with five columns: the name of the taxonomic rank being
+#'   queried, the left and right values associated with that taxonomic rank,
+#'   details of the match type, and whether there were any issues associated
+#'   with the query
 #' @export
 get_lft_rgt <- function(query) {
   x <- GET(query)
   y <- fromJSON(rawToChar(x$content))
-  tibble(kingdom = y$kingdom,
+  tax_rank <- y$rank
+  tibble(!!tax_rank := y[[tax_rank]],
          left = y$lft,
          right = y$rgt,
          match_type = y$matchType,
          issues = y$issues)
-}
+  }
