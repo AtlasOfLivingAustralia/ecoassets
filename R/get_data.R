@@ -60,20 +60,23 @@ get_occ <- function(each_year) {
 
 #' Get left and right values from the API for each taxonomic rank being queried
 #'
-#' @param query The URL string to use as a query on the namematching API
+#' @param suffix The taxon to append to the end of the namematching API url as a
+#'   query
 #'
 #' @return A tibble with five columns: the name of the taxonomic rank being
 #'   queried, the left and right values associated with that taxonomic rank,
 #'   details of the match type, and whether there were any issues associated
 #'   with the query
 #' @export
-get_lft_rgt <- function(query) {
+get_lft_rgt <- function(suffix) {
+  url <- "https://namematching-ws.ala.org.au/api/search?q="
+  query <- paste0(url, suffix)
   x <- GET(query)
   y <- fromJSON(rawToChar(x$content))
   tax_rank <- y$rank
   tibble(!!tax_rank := y[[tax_rank]],
-         left = y$lft,
-         right = y$rgt,
+         lft = y$lft,
+         rgt = y$rgt,
          match_type = y$matchType,
          issues = y$issues)
   }
