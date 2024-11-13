@@ -184,6 +184,7 @@ ala_events <- events_ds |>
   st_join(states_sf, join = st_intersects) |> 
   st_set_geometry(NULL) |> 
   mutate(nri = "ALA",
+         year = as.double(year),
          datasetURI = paste0("https://collections.ala.org.au/public/show/", dataResourceUid),
          nriKeyword = paste0(samplingProtocol, ": ", eventsCount, " samples"),
          facet2 = case_when(!is.na(facet2) ~ facet2,
