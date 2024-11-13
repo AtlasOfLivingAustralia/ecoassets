@@ -20,18 +20,14 @@ states_sf <- read_sf(here("data", "external", "aust_states", "aust_states.shp"))
   select(stateTerritory = STE_NAME21) |> 
   filter(stateTerritory != "Outside Australia") 
 
-sf_use_s2(FALSE)
-
 
 # ALA -------
-
-ds <- open_dataset("data/galah")
 
 # Events are sets of occurrence records where taxa have been identified to at 
 # least species level, and have information about datasetID, sampling protocol, 
 # location, and date. 
 
-source("R/summarising_functions.R")
+ds <- open_dataset("data/galah")
 dir.create("data/tmp_events")
 dir.create("data/tmp_events_agg")
 
@@ -49,17 +45,14 @@ walk(pq_files, summarise_events)
 events_ds <- open_dataset("data/tmp_events_agg")
 
 # Get left and right values for each kingdom
-url <- "https://namematching-ws.ala.org.au/api/search?q="
-kingdoms <- search_fields("kingdom") |>
-  show_values()
-queries <- paste0(url, kingdoms$kingdom)
-
-kingdoms_lft_rgt <- queries |> 
+kingdoms_lft_rgt <- search_fields("kingdom") |>
+  show_values() |>  
+  pull(kingdom) |> 
   map(get_lft_rgt) |> 
   list_rbind() |> 
   col_vals_equal(columns = match_type, value = "exactMatch") |> 
   col_vals_equal(columns = issues, value = "noIssue") |> 
-  select(kingdom, left, right)
+  select(1:3)
 
 saveRDS(kingdoms_lft_rgt, "data/interim/kingdoms_lft_rgt_2023.RDS")
 
@@ -89,58 +82,65 @@ grouped_events <- events_ds |>
 protocol_records <- grouped_events |> 
   filter(eventsCount >= 10,
          maxSpeciesCount >= 5) |> 
-  
-
-  
-
-# protocol_records <- event_records |> 
-#   group_by(dataResourceUid,
-#            dataResourceName,
-#            samplingProtocol, 
-#            eventID) |> 
-#   summarise(eventsCount = n(),
-#             maxSpeciesCount = max(speciesCount),
-#             maxOccCount = max(occCount),
-#             minMinLeft = min(minLeft),
-#             maxMaxRight = max(maxRight)) |> 
-#   ungroup() |> 
-#   col_vals_lte(columns = vars(minMinLeft), value = vars(maxMaxRight)) |> 
-  # filter(eventsCount >= 10,
-  #        maxSpeciesCount >= 5) |> 
   left_join(kingdoms_lft_rgt,
             by = join_by(between(minMinLeft, lft, rgt, bounds = "[]"))) |> 
-  select(-c(lft, rgt, rank)) |> 
-  rename(kingdom_left = search_term) |> 
+  # do this manually for taxa that have been mistakenly left off the backbone
+  mutate(kingdom = replace_na(kingdom, "Plantae")) |> 
+  select(-c(lft, rgt)) |> 
+  rename(kingdom_left = kingdom) |> 
   left_join(kingdoms_lft_rgt, 
             by = join_by(between(maxMaxRight, lft, rgt, bounds = "[]"))) |>
-  select(-c(lft, rgt, rank)) |> 
-  rename(kingdom_right = search_term) |> 
-  mutate(exclude = case_when(
+  select(-c(lft, rgt)) |> 
+  rename(kingdom_right = kingdom) |>
+  mutate(include = case_when(
     (kingdom_left != kingdom_right) &
       (kingdom_left == "Animalia" |
          kingdom_right == "Animalia") ~ "exclude",
     TRUE ~ "include")) |>
-  filter(exclude == "include") |>
-  select(-exclude)
+  filter(include == "include") |>
+  select(-include)
 
 ### ALA keywords ------
+# NOTE: NZOR ids (haptophytes, coccolithophores, diatoms, bacteria) don't
+# produce a match using search_taxa(); this is fine to ignore 
+# Unfortunately the events_mapping dataset becomes out of date as AFD etc.
+# update links so anything not matched needs to be manually searched and added
 mapping_ala <- read_csv(here("data", "external", "events_mapping.csv")) |>
   filter(str_detect(label, "Biodiversity")) |> 
   select(-source, -keyword) |> 
-  unique()
+  unique() |> 
+  filter(!str_detect(id, "NZOR")) |> 
+  mutate(lowest_classification = if_else(!is.na(facet3), facet3, facet2)) |> 
+  # currently doing this manually because I can't figure out anything else :/
+  mutate(namematching_suffix = case_when(
+    lowest_classification == "Fish" ~ "pisces",
+    lowest_classification == "Mollusks" ~ "mollusca",
+    lowest_classification == "Plants" ~ "plantae",
+    lowest_classification == "Protists" ~ "protista",
+    lowest_classification == "Reptiles" ~ "reptilia",
+    TRUE ~ lowest_classification)) |> 
+  rowid_to_column()
 
-# NOTE: NZOR ids (haptophytes, coccolithophores, diatoms, bacteria) don't 
-# produce a match using search_taxa(); this is fine to ignore
-ala_keywords <- search_taxa(mapping_ala$id)
-
-ala_lft_rgt <- mapping_ala |>
-  full_join(ala_keywords,
-            by = join_by(id == search_term)) |> 
+# This is a horrible hardcoded solution but the best I can do now because class
+# is misspelled in the namematching output
+# (https://github.com/AtlasOfLivingAustralia/ala-name-matching/issues/230). This
+# means birds, mammals, reptiles etc. are returned without identifiers. Fish are
+# a whole other paraphyletic nightmare. Check every step of this manually.
+ala_lft_rgt <- mapping_ala |> 
+  filter(namematching_suffix != "pisces") |> 
+  pull(namematching_suffix) |> 
+  map(get_lft_rgt) |> 
+  list_rbind() |> 
+  mutate(rowid = c(1:8, 10:20)) |> 
+  # check a couple of values manually here using the API
+  select(rowid, lft, rgt) |> 
+  bind_rows(tibble(rowid = 9, lft = 36660, rgt = 51942)) |> 
+  full_join(mapping_ala, by = join_by(rowid)) |> 
   select(id:facet3, lft, rgt) |> 
   rowwise() |> 
   mutate(levels = str_count(label, "\\|")) |> 
   ungroup()
-
+  
 # If events contain plant and non-plant (excluding animals) records, treat
 # those as plant monitoring events
 protocol_records_plant <- protocol_records |> 
@@ -169,7 +169,8 @@ protocol_records_mapped <- bind_rows(protocol_records_animal,
 
 # Use mapped protocol records as a filter to remove event records that do not 
 # meet the specified criteria
-ala_events <- event_records |> 
+ala_events <- events_ds |>
+  collect() |> 
   inner_join(protocol_records_mapped, 
              by = join_by(dataResourceUid, 
                           dataResourceName, 
@@ -210,46 +211,6 @@ ala_events <- event_records |>
   distinct()
 
 saveRDS(ala_events, "data/interim/events_ala.RDS") 
-
-### OPTION 1: get lft rgt values -----
-# This is the easier option for now
-# use {galah} version on a branch to get lft and rgt values
-# remotes::install_github("AtlasOfLivingAustralia/galah@lft-rgt")
-# library(galah)
-# kingdoms <- search_fields("kingdom") |>
-#   show_values()
-# get_lft_rgt <- search_taxa(kingdoms$category) |>
-#   select(search_term, lft, rgt, rank)
-# kingdoms_lft_rgt <- full_join(get_lft_rgt,
-#                               kingdoms,
-#                               join_by("search_term" == "category",
-#                                       "rank" == "field"))
-# saveRDS(kingdoms_lft_rgt, "data/interim/kingdoms_lft_rgt.RDS")
-#
-### OPTION 2: get lft rgt values -----
-# needs to be re-run whenever names index changes
-# library(galah)
-# library(httr)
-# library(jsonlite)
-#
-# url <- "https://namematching-ws.ala.org.au/api/search?q="  
-# 
-# kingdoms <- search_fields("kingdom") |> 
-#   show_values() 
-# 
-# queries <- paste0(url, kingdoms$category)
-# 
-# get_lft_rgt <- function(query) {
-#   x <- GET(query)
-#   y <- fromJSON(rawToChar(x$content))
-#   tibble(kingdom = y$kingdom,
-#          left = y$lft, 
-#          right = y$rgt, 
-#          match_type = y$matchType,
-#          issues = y$issues)
-# }
-# 
-# kingdoms_lft_rgt <- map_dfr(queries, get_lft_rgt)
 
 
 # TERN -----
