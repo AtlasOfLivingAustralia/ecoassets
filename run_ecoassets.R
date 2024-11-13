@@ -45,14 +45,19 @@ assert_that(noNA(pull(ds, speciesID)))
 # assert_that(not_all_NA(ds, "cl10000"))
 # lapply(names(ds)[1:3], not_all_NA, ds = ds)
 
-# 3. monitoring datasets and plots 
+# Probably not possible to functionalise these scripts; each output needs to be
+# manually examined and decisions have to be made about how to rub subsequent
+# chunks of code based on those outputs. Some of the biodiversity code could be
+# turned into functions though to make the scripts more readable
+
+# monitoring datasets and plots 
 source("scripts/assemble_monitoring.R")
 source("scripts/plot_monitoring.R")
 
-# 4. biodiversity datasets and plots
+# biodiversity datasets and plots
 source("scripts/create_relational_tables.R")
 source("scripts/facet_biodiversity.R")
 source("scripts/plot_biodiversity.R")
 
-# 5. state of forests datasets for ABARES
+# state of forests datasets for ABARES
 source("scripts/state_of_forests.R")
