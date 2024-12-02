@@ -45,7 +45,19 @@ galah_call() |>
          (!is.na(cl966) | !is.na(cl1048))) |>
   group_by(dataResourceName) |>
   atlas_counts() |> 
-  write_csv("data/data_sources.csv")
+  write_csv("data/data_sources_spp_occ.csv")
+
+galah_call() |> 
+  galah_apply_profile(ALA) |>
+  filter(year >= 2010,
+         year <= 2023,
+         decimalLatitude != "",
+         decimalLongitude != "",
+         speciesID != "",
+         (!is.na(cl966) | !is.na(cl1048))) |>
+  group_by(dataResourceName) |>
+  atlas_counts() |> 
+  write_csv("data/data_sources_env_monitoring.csv")
 
 # check data -----
 ds <- open_dataset("data/galah")
