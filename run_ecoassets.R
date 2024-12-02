@@ -34,6 +34,19 @@ sf_use_s2(FALSE)
 years <- as.numeric(c(1900:2023))
 walk(years, get_occ)
 
+# get data sources -------
+galah_call() |> 
+  galah_apply_profile(ALA) |>
+  filter(year >= 1900,
+         year <= 2023,
+         decimalLatitude != "",
+         decimalLongitude != "",
+         speciesID != "",
+         (!is.na(cl966) | !is.na(cl1048))) |>
+  group_by(dataResourceName) |>
+  atlas_counts() |> 
+  write_csv("data/data_sources.csv")
+
 # check data -----
 ds <- open_dataset("data/galah")
 assert_that(are_equal(ncol(ds), 33))
