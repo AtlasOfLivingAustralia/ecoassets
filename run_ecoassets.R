@@ -1,4 +1,4 @@
-# libraries -----
+# libraries, options, config -----
 {
   library(conflicted)
   library(tidyverse)
@@ -22,13 +22,19 @@ list.files(path = "R", full.names = TRUE) |>
 
 conflicts_prefer(
   dplyr::filter,
-  tidyr::unnest
+  tidyr::unnest,
+  dplyr::desc
 )
 
-# options, config  ----- 
 galah_config(email = Sys.getenv("ALA_EMAIL"), verbose = TRUE)
+
 options(arrow.pull_as_vector = TRUE)
+
 sf_use_s2(FALSE)
+
+font_add_google("Lato", "lato")
+showtext_auto()
+showtext_opts(dpi = 300)
 
 # get data ----- 
 years <- as.numeric(c(1900:2023))
