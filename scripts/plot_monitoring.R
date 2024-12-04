@@ -3,13 +3,6 @@
 # animal monitoring events 
 # TODO: revisit colour schemes in plots
 
-source(here("scripts", "plotting_functions.R"))
-
-font_add_google("Lato", "lato")
-showtext_auto()
-showtext_opts(dpi = 300)
-
-
 # shapefiles -------
 ibra_sf <- st_read(here("data", "external", "ibra7", "ibra7_regions.shp")) |>
   ms_simplify(keep = 0.2) |> 
@@ -23,14 +16,18 @@ imcra_sf <- st_read(here("data", "external", "imcra4", "imcra4_meso.shp")) |>
 
 
 # monitoring effort ----
-ibra_monitoring <- read_csv(here("data", "processed", "monitoring_ibra.csv")) |> 
+ibra_monitoring <- read_csv(here("data", 
+                                 "summary_monitoring_effort_terrestrial", 
+                                 "summary_monitoring_effort_terrestrial.csv")) |> 
   group_by(ibraRegion) |> 
   summarise(intensity = n_distinct(year, featureFacet1)/13) |> 
   right_join(ibra_sf, by = join_by(ibraRegion)) |> 
   mutate(intensity = replace_na(intensity, 0)) |> 
   st_as_sf()
 
-imcra_monitoring <- read_csv(here("data", "processed", "monitoring_imcra.csv")) |> 
+imcra_monitoring <- read_csv(here("data", 
+                                  "summary_monitoring_effort_marine", 
+                                  "summary_monitoring_effort_marine.csv")) |> 
   group_by(imcraRegion) |> 
   summarise(intensity = n_distinct(year, featureFacet1)/13) |> 
   right_join(imcra_sf, by = join_by(imcraRegion)) |> 
@@ -47,7 +44,9 @@ ggsave(here("plots", "monitoring_effort.png"),
 
 
 # events point plots -----
-events_animals <- read_csv(here("data", "processed", "monitoring.csv")) |> 
+events_animals <- read_csv(here("data", 
+                                "aggregated_env_monitoring", 
+                                "aggregated_env_monitoring.csv")) |> 
   filter(featureFacet1 == "Biological Classification", 
          featureFacet2 == "Animals") |> 
   distinct(decimalLatitude, decimalLongitude, featureFacet2) |>  
@@ -66,7 +65,9 @@ ggsave(here("plots", "event_points_animals.png"),
        width = 10, 
        units = "in")
 
-events_plants <- read_csv(here("data", "processed", "monitoring.csv")) |> 
+events_plants <- read_csv(here("data", 
+                               "aggregated_env_monitoring", 
+                               "aggregated_env_monitoring.csv")) |> 
   filter(featureFacet1 == "Biological Classification", 
          featureFacet2 == "Plants") |> 
   distinct(decimalLatitude, decimalLongitude, featureFacet2) |> 

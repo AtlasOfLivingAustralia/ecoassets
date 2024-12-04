@@ -4,33 +4,7 @@
 # choropleths and gif show the proportion of human observations in each 
 # bioregion across aggregated time periods 
 
-source(here("scripts", "plotting_functions.R"))
-
-font_add_google("Lato", "lato")
-showtext_auto()
-showtext_opts(dpi = 300)
-
-
 # heatmaps ------
-
-get_proportions <- function(df, region_type, status_val) {
-  
-  df |> 
-    group_by({{region_type}}, yearStart, yearEnd, status) |>
-    mutate(groupedSpeciesCount = sum(speciesCount)) |>
-    ungroup() |> 
-    distinct({{region_type}}, yearStart, yearEnd, status, groupedSpeciesCount) |> 
-    group_by({{region_type}}, yearStart, yearEnd) |>
-    mutate(totalCount = sum(groupedSpeciesCount)) |>
-    ungroup() |> 
-    filter(status == status_val) |>
-    rowwise() |>
-    mutate(prop = groupedSpeciesCount / totalCount) |>
-    ungroup() |> 
-    mutate(period = paste0(yearStart, "—", yearEnd))
-}
-
-
 ### 01. ibra griis -----
 ibra_griis <- read_csv(here("data", 
                             "summary_introduced_spp_occ_terrestrial",
