@@ -37,7 +37,7 @@ showtext_auto()
 showtext_opts(dpi = 300)
 
 # get data ----- 
-years <- as.numeric(c(1900:2023))
+years <- as.numeric(c(2020:2025))
 walk(years, get_occ)
 
 # get data sources -------
@@ -77,7 +77,7 @@ assert_that(noNA(pull(ds, speciesID)))
 # lapply(names(ds)[1:3], not_all_NA, ds = ds)
 
 # Probably not possible to functionalise these scripts; each output needs to be
-# manually examined and decisions have to be made about how to rub subsequent
+# manually examined and decisions have to be made about how to run subsequent
 # chunks of code based on those outputs. Some of the biodiversity code could be
 # turned into functions though to make the scripts more readable
 
